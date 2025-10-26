@@ -30,7 +30,8 @@ const Messages = () => {
     if (currentUserId && otherUserId) {
       fetchMessages();
       fetchOtherUser();
-      subscribeToMessages();
+      const cleanup = subscribeToMessages();
+      return cleanup;
     }
   }, [currentUserId, otherUserId]);
 
@@ -80,8 +81,9 @@ const Messages = () => {
   };
 
   const subscribeToMessages = () => {
+    console.log('Setting up message subscription for users:', currentUserId, otherUserId);
     const channel = supabase
-      .channel('messages')
+      .channel(`messages-${currentUserId}-${otherUserId}`)
       .on(
         'postgres_changes',
         {
@@ -90,18 +92,23 @@ const Messages = () => {
           table: 'messages',
         },
         (payload) => {
+          console.log('Received message:', payload);
           const newMsg = payload.new as Message;
           if (
             (newMsg.sender_id === currentUserId && newMsg.receiver_id === otherUserId) ||
             (newMsg.sender_id === otherUserId && newMsg.receiver_id === currentUserId)
           ) {
+            console.log('Message is relevant, adding to state');
             setMessages((prev) => [...prev, newMsg]);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up message subscription');
       supabase.removeChannel(channel);
     };
   };
