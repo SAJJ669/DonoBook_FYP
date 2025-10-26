@@ -15,11 +15,43 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
+    fetchUserProfile();
     fetchUserBooks();
   }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setUserProfile(profile);
+
+      // If bookstore, check verification status
+      if (profile.user_type === "bookstore") {
+        const { data: verification } = await supabase
+          .from("bookstore_verifications")
+          .select("status")
+          .eq("user_id", user.id)
+          .single();
+
+        setVerificationStatus(verification?.status || null);
+      }
+    } catch (error: any) {
+      console.error("Error fetching profile:", error);
+    }
+  };
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -79,11 +111,38 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
+        {userProfile?.user_type === "bookstore" && !userProfile?.verified && (
+          <Card className="shadow-card mb-8 border-amber-500/50 bg-amber-50/50">
+            <CardContent className="py-6">
+              <div className="flex items-start gap-4">
+                <div className="text-amber-600">
+                  {verificationStatus === "pending" && "⏳"}
+                  {verificationStatus === "rejected" && "❌"}
+                  {!verificationStatus && "📋"}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-heading font-semibold text-foreground mb-1">
+                    {verificationStatus === "pending" && "Verification Pending"}
+                    {verificationStatus === "rejected" && "Verification Rejected"}
+                    {!verificationStatus && "Complete Your Verification"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {verificationStatus === "pending" && "Your bookstore verification is under review. You can browse but cannot upload books until approved."}
+                    {verificationStatus === "rejected" && "Your verification request was rejected. Please contact support for more information."}
+                    {!verificationStatus && "Please submit verification documents to start selling books."}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-heading font-bold text-foreground">My Books</h1>
           <Button
             onClick={() => navigate("/upload")}
             className="bg-primary hover:bg-primary-hover gap-2"
+            disabled={userProfile?.user_type === "bookstore" && !userProfile?.verified}
           >
             <Plus className="h-4 w-4" />
             Upload Book

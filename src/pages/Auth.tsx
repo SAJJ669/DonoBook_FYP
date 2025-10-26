@@ -19,7 +19,13 @@ const Auth = () => {
     email: "",
     password: "",
     name: "",
+    userType: "user" as "user" | "bookstore",
+    shopName: "",
+    shopAddress: "",
+    contactNumber: "",
+    businessId: "",
   });
+  const [proofImage, setProofImage] = useState<File | null>(null);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -57,15 +63,59 @@ const Auth = () => {
               {
                 id: data.user.id,
                 name: formData.name,
-                user_type: "user",
+                user_type: formData.userType,
+                shop_name: formData.userType === "bookstore" ? formData.shopName : null,
+                shop_address: formData.userType === "bookstore" ? formData.shopAddress : null,
+                contact_number: formData.userType === "bookstore" ? formData.contactNumber : null,
+                business_id: formData.userType === "bookstore" ? formData.businessId : null,
               },
             ]);
 
           if (profileError) throw profileError;
 
+          // If bookstore, create verification request
+          if (formData.userType === "bookstore") {
+            let proofImageUrl = null;
+
+            // Upload proof image if provided
+            if (proofImage) {
+              const fileExt = proofImage.name.split('.').pop();
+              const fileName = `${data.user.id}/${Date.now()}.${fileExt}`;
+              
+              const { error: uploadError } = await supabase.storage
+                .from('verification-proofs')
+                .upload(fileName, proofImage);
+
+              if (uploadError) throw uploadError;
+
+              const { data: { publicUrl } } = supabase.storage
+                .from('verification-proofs')
+                .getPublicUrl(fileName);
+
+              proofImageUrl = publicUrl;
+            }
+
+            const { error: verificationError } = await supabase
+              .from("bookstore_verifications")
+              .insert([
+                {
+                  user_id: data.user.id,
+                  shop_name: formData.shopName,
+                  shop_address: formData.shopAddress,
+                  contact_number: formData.contactNumber,
+                  business_id: formData.businessId,
+                  proof_image_url: proofImageUrl,
+                },
+              ]);
+
+            if (verificationError) throw verificationError;
+          }
+
           toast({
             title: "Success!",
-            description: "Account created successfully!",
+            description: formData.userType === "bookstore" 
+              ? "Account created! Your verification request is pending approval." 
+              : "Account created successfully!",
           });
           navigate("/dashboard");
         }
@@ -115,17 +165,92 @@ const Auth = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignup && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="John Doe"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="John Doe"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="userType">Account Type</Label>
+                    <select
+                      id="userType"
+                      value={formData.userType}
+                      onChange={(e) => setFormData({ ...formData, userType: e.target.value as "user" | "bookstore" })}
+                      className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                      required
+                    >
+                      <option value="user">Student/User</option>
+                      <option value="bookstore">Bookstore</option>
+                    </select>
+                  </div>
+                  {formData.userType === "bookstore" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="shopName">Shop Name</Label>
+                        <Input
+                          id="shopName"
+                          type="text"
+                          placeholder="Book Haven"
+                          value={formData.shopName}
+                          onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="shopAddress">Shop Address</Label>
+                        <Input
+                          id="shopAddress"
+                          type="text"
+                          placeholder="123 Main St, City"
+                          value={formData.shopAddress}
+                          onChange={(e) => setFormData({ ...formData, shopAddress: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contactNumber">Contact Number</Label>
+                        <Input
+                          id="contactNumber"
+                          type="tel"
+                          placeholder="+1234567890"
+                          value={formData.contactNumber}
+                          onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="businessId">Business ID / Registration Number</Label>
+                        <Input
+                          id="businessId"
+                          type="text"
+                          placeholder="BUS123456"
+                          value={formData.businessId}
+                          onChange={(e) => setFormData({ ...formData, businessId: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="proofImage">Business Proof Document (Optional)</Label>
+                        <Input
+                          id="proofImage"
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => setProofImage(e.target.files?.[0] || null)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Upload business license or registration certificate
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

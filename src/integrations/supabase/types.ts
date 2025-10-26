@@ -59,6 +59,48 @@ export type Database = {
         }
         Relationships: []
       }
+      bookstore_verifications: {
+        Row: {
+          business_id: string
+          contact_number: string
+          created_at: string | null
+          id: string
+          proof_image_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shop_address: string
+          shop_name: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          contact_number: string
+          created_at?: string | null
+          id?: string
+          proof_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shop_address: string
+          shop_name: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          contact_number?: string
+          created_at?: string | null
+          id?: string
+          proof_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shop_address?: string
+          shop_name?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           created_at: string
@@ -88,22 +130,58 @@ export type Database = {
       }
       profiles: {
         Row: {
+          business_id: string | null
+          contact_number: string | null
           created_at: string
           id: string
           name: string
+          shop_address: string | null
+          shop_name: string | null
           user_type: Database["public"]["Enums"]["user_type"]
+          verified: boolean | null
         }
         Insert: {
+          business_id?: string | null
+          contact_number?: string | null
           created_at?: string
           id: string
           name: string
+          shop_address?: string | null
+          shop_name?: string | null
           user_type?: Database["public"]["Enums"]["user_type"]
+          verified?: boolean | null
         }
         Update: {
+          business_id?: string | null
+          contact_number?: string | null
           created_at?: string
           id?: string
           name?: string
+          shop_address?: string | null
+          shop_name?: string | null
           user_type?: Database["public"]["Enums"]["user_type"]
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
         }
         Relationships: []
       }
@@ -112,9 +190,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "user"
       book_category: "textbook" | "reading_book"
       book_condition: "new" | "used"
       book_type: "donate" | "exchange" | "sell"
@@ -246,6 +331,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       book_category: ["textbook", "reading_book"],
       book_condition: ["new", "used"],
       book_type: ["donate", "exchange", "sell"],

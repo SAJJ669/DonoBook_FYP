@@ -10,20 +10,40 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        checkAdminRole(session.user.id);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkAdminRole = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    
+    setIsAdmin(!!data);
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -80,6 +100,16 @@ const Navbar = () => {
                   <Bot className="h-4 w-4" />
                   Assistant
                 </Button>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate("/admin")}
+                    className="gap-2 text-primary"
+                  >
+                    <User className="h-4 w-4" />
+                    Admin Panel
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={handleLogout}

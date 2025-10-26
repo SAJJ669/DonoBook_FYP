@@ -10,6 +10,7 @@ import UploadBook from "./pages/UploadBook";
 import BookDetails from "./pages/BookDetails";
 import Messages from "./pages/Messages";
 import Assistant from "./pages/Assistant";
+import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/book/:id" element={<BookDetails />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/assistant" element={<Assistant />} />
+          <Route path="/admin" element={<AdminPanel />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
