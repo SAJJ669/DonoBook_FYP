@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type VerificationRequest = {
   id: string;
@@ -151,6 +152,14 @@ const AdminPanel = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
+        <div className="mb-4">
+          <Link to="/admin/settings">
+            <Button variant="outline" className="gap-2">
+              <Settings className="h-4 w-4" />
+              AI Configuration Settings
+            </Button>
+          </Link>
+        </div>
         <h1 className="text-4xl font-heading font-bold text-foreground mb-8">
           Admin Panel - Bookstore Verification
         </h1>

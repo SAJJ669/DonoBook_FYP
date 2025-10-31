@@ -86,6 +86,14 @@ const Navbar = () => {
                 </Button>
                 <Button
                   variant="ghost"
+                  onClick={() => navigate("/upload-ai")}
+                  className="gap-2"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  AI Upload
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={() => navigate("/messages")}
                   className="gap-2"
                 >

@@ -7,10 +7,12 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import UploadBook from "./pages/UploadBook";
+import UploadBookAI from "./pages/UploadBookAI";
 import BookDetails from "./pages/BookDetails";
 import Messages from "./pages/Messages";
 import Assistant from "./pages/Assistant";
 import AdminPanel from "./pages/AdminPanel";
+import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,10 +28,12 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<UploadBook />} />
+          <Route path="/upload-ai" element={<UploadBookAI />} />
           <Route path="/book/:id" element={<BookDetails />} />
-          <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:userId" element={<Messages />} />
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
