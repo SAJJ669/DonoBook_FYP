@@ -11,6 +11,7 @@ import BookDetails from "./pages/BookDetails";
 import Messages from "./pages/Messages";
 import Assistant from "./pages/Assistant";
 import AdminPanel from "./pages/AdminPanel";
+import NearbyUsers from "./pages/NearbyUsers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/messages" element={<Messages />} />
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/nearby" element={<NearbyUsers />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

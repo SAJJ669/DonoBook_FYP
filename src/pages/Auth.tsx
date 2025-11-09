@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { geocodeAddress } from "@/utils/geocoding";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ const Auth = () => {
     password: "",
     name: "",
     userType: "user" as "user" | "bookstore",
+    address: "",
+    gender: "",
     shopName: "",
     shopAddress: "",
     contactNumber: "",
@@ -56,6 +59,20 @@ const Auth = () => {
         if (error) throw error;
 
         if (data.user) {
+          // Geocode address if provided
+          let latitude = null;
+          let longitude = null;
+          
+          const addressToGeocode = formData.userType === "user" ? formData.address : formData.shopAddress;
+          
+          if (addressToGeocode && addressToGeocode.trim()) {
+            const geocodeResult = await geocodeAddress(addressToGeocode);
+            if (geocodeResult) {
+              latitude = geocodeResult.lat;
+              longitude = geocodeResult.lng;
+            }
+          }
+
           // Create profile
           const { error: profileError } = await supabase
             .from("profiles")
@@ -64,6 +81,10 @@ const Auth = () => {
                 id: data.user.id,
                 name: formData.name,
                 user_type: formData.userType,
+                address: formData.userType === "user" ? formData.address : null,
+                gender: formData.userType === "user" ? formData.gender : null,
+                latitude: latitude,
+                longitude: longitude,
                 shop_name: formData.userType === "bookstore" ? formData.shopName : null,
                 shop_address: formData.userType === "bookstore" ? formData.shopAddress : null,
                 contact_number: formData.userType === "bookstore" ? formData.contactNumber : null,
@@ -190,6 +211,37 @@ const Auth = () => {
                       <option value="bookstore">Bookstore</option>
                     </select>
                   </div>
+                  {formData.userType === "user" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <Input
+                          id="address"
+                          type="text"
+                          placeholder="123 Main St, City, Country"
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Your address will be used to show you on the map for nearby users
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <select
+                          id="gender"
+                          value={formData.gender}
+                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                          className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                        >
+                          <option value="">Prefer not to say</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
                   {formData.userType === "bookstore" && (
                     <>
                       <div className="space-y-2">
