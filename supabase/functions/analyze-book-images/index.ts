@@ -76,7 +76,12 @@ Return the data as a JSON object with these fields. If information is not visibl
     }
 
     const data = await response.json();
-    const extractedData = JSON.parse(data.choices[0].message.content);
+    let content = data.choices[0].message.content;
+    
+    // Strip markdown code blocks if present
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    const extractedData = JSON.parse(content);
     
     console.log('Extracted book data:', extractedData);
 
