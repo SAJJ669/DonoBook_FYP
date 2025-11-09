@@ -103,7 +103,12 @@ serve(async (req) => {
     }
 
     const aiData = await response.json();
-    const lookupData = JSON.parse(aiData.choices[0].message.content);
+    let content = aiData.choices[0].message.content;
+    
+    // Strip markdown code blocks if present
+    content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    const lookupData = JSON.parse(content);
 
     // Calculate matching score
     let matchScore = lookupData.confidence_score || 0;
