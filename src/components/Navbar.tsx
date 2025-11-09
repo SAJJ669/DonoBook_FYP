@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, LogOut, MessageSquare, Bot, MapPin } from "lucide-react";
+import { BookOpen, User, LogOut, MessageSquare, Bot, MapPin, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -107,6 +107,14 @@ const Navbar = () => {
                 >
                   <Bot className="h-4 w-4" />
                   Assistant
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/settings")}
+                  className="gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
                 </Button>
                 {isAdmin && (
                   <Button
