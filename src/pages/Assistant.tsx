@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, Bot, Loader2 } from "lucide-react";
+import { Send, Bot, Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -102,6 +102,44 @@ const Assistant = () => {
     }
   };
 
+  const handleClearHistory = async () => {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from("chat_messages")
+      .delete()
+      .eq("user_id", userId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear chat history",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Reset to welcome message
+    const welcomeMessage: Message = {
+      role: "assistant",
+      content: "Hi! I'm the BookShare Assistant. I can help you with:\n• How to use the app\n• Finding or requesting books\n• Donating or exchanging textbooks\n\nWhat would you like to know?",
+      timestamp: new Date().toISOString()
+    };
+    setMessages([welcomeMessage]);
+    
+    // Save welcome message to database
+    await supabase.from("chat_messages").insert({
+      user_id: userId,
+      role: "assistant",
+      content: welcomeMessage.content,
+    });
+
+    toast({
+      title: "Success",
+      description: "Chat history cleared",
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading || !userId) return;
@@ -171,14 +209,25 @@ const Assistant = () => {
       <div className="container mx-auto px-4 py-8">
         <Card className="shadow-card max-w-4xl mx-auto">
           <CardHeader className="border-b bg-gradient-primary">
-            <div className="flex items-center gap-3">
-              <Bot className="h-8 w-8 text-white" />
-              <div>
-                <CardTitle className="text-white font-heading">BookShare Assistant</CardTitle>
-                <CardDescription className="text-white/80">
-                  Your AI-powered guide to using BookShare
-                </CardDescription>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bot className="h-8 w-8 text-white" />
+                <div>
+                  <CardTitle className="text-white font-heading">BookShare Assistant</CardTitle>
+                  <CardDescription className="text-white/80">
+                    Your AI-powered guide to using BookShare
+                  </CardDescription>
+                </div>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearHistory}
+                className="text-white hover:bg-white/20"
+                title="Clear chat history"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="p-0">
