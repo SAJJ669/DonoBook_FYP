@@ -246,10 +246,14 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           business_id: string | null
           contact_number: string | null
           created_at: string
+          gender: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
           shop_address: string | null
           shop_name: string | null
@@ -257,10 +261,14 @@ export type Database = {
           verified: boolean | null
         }
         Insert: {
+          address?: string | null
           business_id?: string | null
           contact_number?: string | null
           created_at?: string
+          gender?: string | null
           id: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
           shop_address?: string | null
           shop_name?: string | null
@@ -268,10 +276,14 @@ export type Database = {
           verified?: boolean | null
         }
         Update: {
+          address?: string | null
           business_id?: string | null
           contact_number?: string | null
           created_at?: string
+          gender?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           shop_address?: string | null
           shop_name?: string | null
