@@ -213,7 +213,7 @@ const Assistant = () => {
               <div className="flex items-center gap-3">
                 <Bot className="h-8 w-8 text-white" />
                 <div>
-                  <CardTitle className="text-white font-heading">BookShare Assistant</CardTitle>
+                  <CardTitle className="text-black font-heading">BookShare Assistant</CardTitle>
                   <CardDescription className="text-white/80">
                     Your AI-powered guide to using BookShare
                   </CardDescription>
