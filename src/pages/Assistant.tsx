@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, Bot } from "lucide-react";
+import { Send, Bot, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,23 +15,97 @@ interface Message {
 
 const Assistant = () => {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "Hi! I'm the BookShare Assistant. I can help you with:\n• How to use the app\n• Finding or requesting books\n• Donating or exchanging textbooks\n\nWhat would you like to know?",
-    },
-  ]);
+  const navigate = useNavigate();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initializeChat = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to use the assistant",
+          variant: "destructive",
+        });
+        navigate("/auth");
+        return;
+      }
+
+      setUserId(user.id);
+
+      // Load chat history
+      const { data: chatHistory, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error loading chat history:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load chat history",
+          variant: "destructive",
+        });
+      }
+
+      if (chatHistory && chatHistory.length > 0) {
+        setMessages(chatHistory.map(msg => ({
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+        })));
+      } else {
+        // Show welcome message only if no history
+        const welcomeMessage: Message = {
+          role: "assistant",
+          content: "Hi! I'm the BookShare Assistant. I can help you with:\n• How to use the app\n• Finding or requesting books\n• Donating or exchanging textbooks\n\nWhat would you like to know?",
+        };
+        setMessages([welcomeMessage]);
+        
+        // Save welcome message to database
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          role: "assistant",
+          content: welcomeMessage.content,
+        });
+      }
+
+      setLoadingHistory(false);
+    };
+
+    initializeChat();
+  }, [navigate, toast]);
+
+  const saveMessage = async (message: Message) => {
+    if (!userId) return;
+
+    const { error } = await supabase.from("chat_messages").insert({
+      user_id: userId,
+      role: message.role,
+      content: message.content,
+    });
+
+    if (error) {
+      console.error("Error saving message:", error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !userId) return;
 
     const userMessage: Message = { role: "user", content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
+
+    // Save user message
+    await saveMessage(userMessage);
 
     try {
       const { data, error } = await supabase.functions.invoke("chat", {
@@ -46,6 +121,9 @@ const Assistant = () => {
         content: data.message || "I apologize, but I couldn't process your request. Please try again.",
       };
       setMessages((prev) => [...prev, assistantMessage]);
+      
+      // Save assistant message
+      await saveMessage(assistantMessage);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -56,6 +134,24 @@ const Assistant = () => {
       setLoading(false);
     }
   };
+
+  if (loadingHistory) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <Card className="shadow-card max-w-4xl mx-auto">
+            <CardContent className="p-8 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Loading chat history...</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
