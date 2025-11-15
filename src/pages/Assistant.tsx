@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  timestamp?: string;
 }
 
 const Assistant = () => {
@@ -21,6 +22,7 @@ const Assistant = () => {
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const initializeChat = async () => {
@@ -58,6 +60,7 @@ const Assistant = () => {
         setMessages(chatHistory.map(msg => ({
           role: msg.role as "user" | "assistant",
           content: msg.content,
+          timestamp: msg.created_at,
         })));
       } else {
         // Show welcome message only if no history
@@ -81,6 +84,10 @@ const Assistant = () => {
     initializeChat();
   }, [navigate, toast]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const saveMessage = async (message: Message) => {
     if (!userId) return;
 
@@ -99,7 +106,11 @@ const Assistant = () => {
     e.preventDefault();
     if (!input.trim() || loading || !userId) return;
 
-    const userMessage: Message = { role: "user", content: input };
+    const userMessage: Message = { 
+      role: "user", 
+      content: input,
+      timestamp: new Date().toISOString()
+    };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
@@ -119,6 +130,7 @@ const Assistant = () => {
       const assistantMessage: Message = {
         role: "assistant",
         content: data.message || "I apologize, but I couldn't process your request. Please try again.",
+        timestamp: new Date().toISOString()
       };
       setMessages((prev) => [...prev, assistantMessage]);
       
@@ -186,6 +198,15 @@ const Assistant = () => {
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.timestamp && (
+                      <p className={`text-xs mt-1 ${
+                        message.role === "user" 
+                          ? "text-white/70" 
+                          : "text-muted-foreground"
+                      }`}>
+                        {new Date(message.timestamp).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -196,6 +217,7 @@ const Assistant = () => {
                   </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
 
             <form onSubmit={handleSubmit} className="border-t p-4 flex gap-2">
