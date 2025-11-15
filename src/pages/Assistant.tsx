@@ -223,7 +223,7 @@ const Assistant = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearHistory}
-                className="text-white hover:bg-white/20"
+                className="bg-blue-600 text-white hover:bg-blue-700"
                 title="Clear chat history"
               >
                 <Trash2 className="h-4 w-4" />
