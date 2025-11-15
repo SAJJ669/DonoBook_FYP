@@ -14,15 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_settings: {
+        Row: {
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      book_metadata: {
+        Row: {
+          author: string | null
+          confidence_score: number | null
+          cover_image_url: string | null
+          created_at: string | null
+          description: string | null
+          dimensions: Json | null
+          edition: string | null
+          id: string
+          isbn: string | null
+          metadata_source: string | null
+          page_count: number | null
+          publication_year: number | null
+          publisher: string | null
+          subjects: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          author?: string | null
+          confidence_score?: number | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          edition?: string | null
+          id?: string
+          isbn?: string | null
+          metadata_source?: string | null
+          page_count?: number | null
+          publication_year?: number | null
+          publisher?: string | null
+          subjects?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          author?: string | null
+          confidence_score?: number | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          edition?: string | null
+          id?: string
+          isbn?: string | null
+          metadata_source?: string | null
+          page_count?: number | null
+          publication_year?: number | null
+          publisher?: string | null
+          subjects?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       books: {
         Row: {
+          ai_extracted_data: Json | null
+          back_image_url: string | null
+          binder_image_url: string | null
           category: Database["public"]["Enums"]["book_category"]
           condition: Database["public"]["Enums"]["book_condition"]
           created_at: string
           description: string | null
+          dimensions: Json | null
+          front_image_url: string | null
           grade: string | null
           id: string
           image_url: string | null
+          inner_pages: Json | null
+          isbn: string | null
+          metadata_id: string | null
           owner_id: string
           price: number | null
           title: string
@@ -30,13 +122,21 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_extracted_data?: Json | null
+          back_image_url?: string | null
+          binder_image_url?: string | null
           category: Database["public"]["Enums"]["book_category"]
           condition: Database["public"]["Enums"]["book_condition"]
           created_at?: string
           description?: string | null
+          dimensions?: Json | null
+          front_image_url?: string | null
           grade?: string | null
           id?: string
           image_url?: string | null
+          inner_pages?: Json | null
+          isbn?: string | null
+          metadata_id?: string | null
           owner_id: string
           price?: number | null
           title: string
@@ -44,20 +144,36 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_extracted_data?: Json | null
+          back_image_url?: string | null
+          binder_image_url?: string | null
           category?: Database["public"]["Enums"]["book_category"]
           condition?: Database["public"]["Enums"]["book_condition"]
           created_at?: string
           description?: string | null
+          dimensions?: Json | null
+          front_image_url?: string | null
           grade?: string | null
           id?: string
           image_url?: string | null
+          inner_pages?: Json | null
+          isbn?: string | null
+          metadata_id?: string | null
           owner_id?: string
           price?: number | null
           title?: string
           type?: Database["public"]["Enums"]["book_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "books_metadata_id_fkey"
+            columns: ["metadata_id"]
+            isOneToOne: false
+            referencedRelation: "book_metadata"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bookstore_verifications: {
         Row: {
@@ -154,10 +270,14 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           business_id: string | null
           contact_number: string | null
           created_at: string
+          gender: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
           shop_address: string | null
           shop_name: string | null
@@ -165,10 +285,14 @@ export type Database = {
           verified: boolean | null
         }
         Insert: {
+          address?: string | null
           business_id?: string | null
           contact_number?: string | null
           created_at?: string
+          gender?: string | null
           id: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
           shop_address?: string | null
           shop_name?: string | null
@@ -176,10 +300,14 @@ export type Database = {
           verified?: boolean | null
         }
         Update: {
+          address?: string | null
           business_id?: string | null
           contact_number?: string | null
           created_at?: string
+          gender?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           shop_address?: string | null
           shop_name?: string | null
