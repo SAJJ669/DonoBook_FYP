@@ -20,11 +20,18 @@ const Messages = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [otherUser, setOtherUser] = useState<Profile | null>(null);
+  const [users, setUsers] = useState<Profile[]>([]); // all users list
   const otherUserId = searchParams.get("userId");
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchAllUsers();
+    }
+  }, [currentUserId]);
 
   useEffect(() => {
     if (currentUserId && otherUserId) {
@@ -33,6 +40,7 @@ const Messages = () => {
       const cleanup = subscribeToMessages();
       return cleanup;
     }
+    return () => { };
   }, [currentUserId, otherUserId]);
 
   const checkAuth = async () => {
@@ -44,9 +52,22 @@ const Messages = () => {
     setCurrentUserId(session.user.id);
   };
 
+  const fetchAllUsers = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .neq("id", currentUserId); // exclude self
+
+    if (error) {
+      console.error("Error fetching users:", error);
+      return;
+    }
+    setUsers(data || []);
+  };
+
   const fetchOtherUser = async () => {
     if (!otherUserId) return;
-    
+
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -81,7 +102,6 @@ const Messages = () => {
   };
 
   const subscribeToMessages = () => {
-    console.log('Setting up message subscription for users:', currentUserId, otherUserId);
     const channel = supabase
       .channel(`user_messages-${currentUserId}-${otherUserId}`)
       .on(
@@ -92,25 +112,18 @@ const Messages = () => {
           table: 'user_messages',
         },
         (payload) => {
-          console.log('Received message:', payload);
           const newMsg = payload.new as Message;
           if (
             (newMsg.sender_id === currentUserId && newMsg.receiver_id === otherUserId) ||
             (newMsg.sender_id === otherUserId && newMsg.receiver_id === currentUserId)
           ) {
-            console.log('Message is relevant, adding to state');
             setMessages((prev) => [...prev, newMsg]);
           }
         }
       )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
-      });
+      .subscribe();
 
-    return () => {
-      console.log('Cleaning up message subscription');
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -137,14 +150,32 @@ const Messages = () => {
     setNewMessage("");
   };
 
+  // --- IF NO USER SELECTED, SHOW USER LIST ---
   if (!otherUserId) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
-          <Card className="shadow-card">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Please select a user to message.</p>
+          <Card className="shadow-card max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle>Start a chat</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-2">
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <Button
+                    key={user.id}
+                    onClick={() => navigate(`/messages?userId=${user.id}`)}
+                    className="w-full text-left"
+                  >
+                    {user.name || "Unnamed User"}
+                  </Button>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground">
+                  No users available to chat with.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -152,6 +183,7 @@ const Messages = () => {
     );
   }
 
+  // --- SHOW CHAT IF USER SELECTED ---
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -167,16 +199,14 @@ const Messages = () => {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${
-                    message.sender_id === currentUserId ? "justify-end" : "justify-start"
-                  }`}
+                  className={`flex ${message.sender_id === currentUserId ? "justify-end" : "justify-start"
+                    }`}
                 >
                   <div
-                    className={`max-w-xs px-4 py-2 rounded-lg ${
-                      message.sender_id === currentUserId
+                    className={`max-w-xs px-4 py-2 rounded-lg ${message.sender_id === currentUserId
                         ? "bg-primary text-white"
                         : "bg-muted"
-                    }`}
+                      }`}
                   >
                     <p>{message.text}</p>
                     <p className="text-xs opacity-70 mt-1">
