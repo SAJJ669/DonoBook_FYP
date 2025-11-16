@@ -9,7 +9,7 @@ import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
-type Message = Database['public']['Tables']['messages']['Row'];
+type Message = Database['public']['Tables']['user_messages']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 const Messages = () => {
@@ -68,7 +68,7 @@ const Messages = () => {
     if (!currentUserId || !otherUserId) return;
 
     const { data, error } = await supabase
-      .from("messages")
+      .from("user_messages")
       .select("*")
       .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`)
       .order("created_at", { ascending: true });
@@ -83,13 +83,13 @@ const Messages = () => {
   const subscribeToMessages = () => {
     console.log('Setting up message subscription for users:', currentUserId, otherUserId);
     const channel = supabase
-      .channel(`messages-${currentUserId}-${otherUserId}`)
+      .channel(`user_messages-${currentUserId}-${otherUserId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
+          table: 'user_messages',
         },
         (payload) => {
           console.log('Received message:', payload);
@@ -117,7 +117,7 @@ const Messages = () => {
     e.preventDefault();
     if (!newMessage.trim() || !currentUserId || !otherUserId) return;
 
-    const { error } = await supabase.from("messages").insert([
+    const { error } = await supabase.from("user_messages").insert([
       {
         sender_id: currentUserId,
         receiver_id: otherUserId,
