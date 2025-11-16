@@ -14,6 +14,7 @@ import Assistant from "./pages/Assistant";
 import AdminPanel from "./pages/AdminPanel";
 import AdminSettings from "./pages/AdminSettings";
 import NotFound from "./pages/NotFound";
+import Book3DTest from "./components/Book3DTest";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          {/* <Route path="/test" element={<Book3DTest /> } /> */}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
