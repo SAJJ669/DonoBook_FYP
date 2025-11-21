@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import type { Database } from "@/integrations/supabase/types";
 
 type Message = Database['public']['Tables']['user_messages']['Row'];
@@ -23,6 +24,15 @@ const Messages = () => {
   const [users, setUsers] = useState<Profile[]>([]); // all users list
   const otherUserId = searchParams.get("userId");
 
+  // Enable notifications for this chat
+  useMessageNotifications({
+    currentUserId,
+    onNewMessage: () => {
+      // Messages will be updated via realtime subscription
+      markMessagesAsRead();
+    },
+  });
+
   useEffect(() => {
     checkAuth();
   }, []);
@@ -37,6 +47,7 @@ const Messages = () => {
     if (currentUserId && otherUserId) {
       fetchMessages();
       fetchOtherUser();
+      markMessagesAsRead();
       const cleanup = subscribeToMessages();
       return cleanup;
     }
@@ -99,6 +110,22 @@ const Messages = () => {
       return;
     }
     setMessages(data || []);
+  };
+
+  const markMessagesAsRead = async () => {
+    if (!currentUserId || !otherUserId) return;
+
+    // Mark all unread messages from the other user as read
+    const { error } = await supabase
+      .from("user_messages")
+      .update({ read: true })
+      .eq("sender_id", otherUserId)
+      .eq("receiver_id", currentUserId)
+      .eq("read", false);
+
+    if (error) {
+      console.error("Error marking messages as read:", error);
+    }
   };
 
   const subscribeToMessages = () => {
@@ -209,9 +236,16 @@ const Messages = () => {
                       }`}
                   >
                     <p>{message.text}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleTimeString()}
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs opacity-70">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </p>
+                      {message.sender_id === currentUserId && (
+                        <p className="text-xs opacity-70 ml-2">
+                          {message.read ? "✓✓" : "✓"}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
