@@ -5,7 +5,10 @@ import Navbar from "@/components/Navbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Bell, BellOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import type { Database } from "@/integrations/supabase/types";
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -135,6 +138,11 @@ const Conversations = () => {
     }
   };
 
+  const { permissionGranted, requestPermission } = useMessageNotifications({
+    currentUserId,
+    onNewMessage: fetchConversations,
+  });
+
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -164,8 +172,26 @@ const Conversations = () => {
       <div className="container mx-auto px-4 py-8">
         <Card className="shadow-card max-w-4xl mx-auto">
           <CardContent className="p-0">
-            <div className="border-b p-6">
+            <div className="border-b p-6 flex items-center justify-between">
               <h1 className="text-2xl font-heading font-bold">Messages</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={requestPermission}
+                className="gap-2"
+              >
+                {permissionGranted ? (
+                  <>
+                    <Bell className="h-4 w-4" />
+                    Notifications On
+                  </>
+                ) : (
+                  <>
+                    <BellOff className="h-4 w-4" />
+                    Enable Notifications
+                  </>
+                )}
+              </Button>
             </div>
 
             {loading ? (
