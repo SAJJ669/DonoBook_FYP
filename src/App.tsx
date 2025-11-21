@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import UploadBook from "./pages/UploadBook";
 import BookDetails from "./pages/BookDetails";
+import Conversations from "./pages/Conversations";
 import Messages from "./pages/Messages";
 import Assistant from "./pages/Assistant";
 import AdminPanel from "./pages/AdminPanel";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<UploadBook />} />
           <Route path="/book/:id" element={<BookDetails />} />
+          <Route path="/conversations" element={<Conversations />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/admin" element={<AdminPanel />} />

@@ -30,6 +30,7 @@ const Messages = () => {
     if (currentUserId && otherUserId) {
       fetchMessages();
       fetchOtherUser();
+      markMessagesAsRead();
       const cleanup = subscribeToMessages();
       return cleanup;
     }
@@ -78,6 +79,22 @@ const Messages = () => {
       return;
     }
     setMessages(data || []);
+  };
+
+  const markMessagesAsRead = async () => {
+    if (!currentUserId || !otherUserId) return;
+
+    // Mark all unread messages from the other user as read
+    const { error } = await supabase
+      .from("user_messages")
+      .update({ read: true })
+      .eq("sender_id", otherUserId)
+      .eq("receiver_id", currentUserId)
+      .eq("read", false);
+
+    if (error) {
+      console.error("Error marking messages as read:", error);
+    }
   };
 
   const subscribeToMessages = () => {
@@ -179,9 +196,16 @@ const Messages = () => {
                     }`}
                   >
                     <p>{message.text}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleTimeString()}
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs opacity-70">
+                        {new Date(message.created_at).toLocaleTimeString()}
+                      </p>
+                      {message.sender_id === currentUserId && (
+                        <p className="text-xs opacity-70 ml-2">
+                          {message.read ? "✓✓" : "✓"}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

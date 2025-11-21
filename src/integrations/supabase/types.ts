@@ -320,6 +320,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          read: boolean
           receiver_id: string
           sender_id: string
           text: string
@@ -327,6 +328,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          read?: boolean
           receiver_id: string
           sender_id: string
           text: string
@@ -334,6 +336,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          read?: boolean
           receiver_id?: string
           sender_id?: string
           text?: string

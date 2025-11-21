@@ -86,7 +86,7 @@ const Navbar = () => {
                 </Button>
                 <Button
                   variant="ghost"
-                  onClick={() => navigate("/messages")}
+                  onClick={() => navigate("/conversations")}
                   className="gap-2"
                 >
                   <MessageSquare className="h-4 w-4" />
