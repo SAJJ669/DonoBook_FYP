@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import type { Database } from "@/integrations/supabase/types";
 
 type Message = Database['public']['Tables']['user_messages']['Row'];
@@ -21,6 +22,15 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState("");
   const [otherUser, setOtherUser] = useState<Profile | null>(null);
   const otherUserId = searchParams.get("userId");
+
+  // Enable notifications for this chat
+  useMessageNotifications({
+    currentUserId,
+    onNewMessage: () => {
+      // Messages will be updated via realtime subscription
+      markMessagesAsRead();
+    },
+  });
 
   useEffect(() => {
     checkAuth();
