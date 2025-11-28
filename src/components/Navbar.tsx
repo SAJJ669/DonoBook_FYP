@@ -11,6 +11,8 @@ const Navbar = () => {
   const { toast } = useToast();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
 
   useEffect(() => {
     // Get initial session
@@ -18,6 +20,7 @@ const Navbar = () => {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkAdminRole(session.user.id);
+        subscribeToUnreadMessages(session.user.id);
       }
     });
 
@@ -26,8 +29,10 @@ const Navbar = () => {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkAdminRole(session.user.id);
+        subscribeToUnreadMessages(session.user.id);
       } else {
         setIsAdmin(false);
+        setUnreadMessages(0);
       }
     });
 
@@ -41,8 +46,44 @@ const Navbar = () => {
       .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
-    
+
     setIsAdmin(!!data);
+  };
+
+  const subscribeToUnreadMessages = (userId: string) => {
+    // Fetch initial unread count
+    fetchUnreadCount(userId);
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel(`user_messages-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_messages',
+        },
+        () => {
+          // Refetch unread count on any message change
+          fetchUnreadCount(userId);
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  };
+
+  const fetchUnreadCount = async (userId: string) => {
+    const { count, error } = await supabase
+      .from("user_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("receiver_id", userId)
+      .eq("read", false);
+
+    if (!error) {
+      setUnreadMessages(count || 0);
+    }
   };
 
   const handleLogout = async () => {
