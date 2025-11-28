@@ -319,6 +319,8 @@ export type Database = {
       user_messages: {
         Row: {
           created_at: string | null
+          edit_history: Json | null
+          edited_at: string | null
           id: string
           read: boolean
           receiver_id: string
@@ -327,6 +329,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          edit_history?: Json | null
+          edited_at?: string | null
           id?: string
           read?: boolean
           receiver_id: string
@@ -335,6 +339,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          edit_history?: Json | null
+          edited_at?: string | null
           id?: string
           read?: boolean
           receiver_id?: string

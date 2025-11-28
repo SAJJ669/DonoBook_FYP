@@ -5,10 +5,20 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send } from "lucide-react";
+import { Send, Edit2, Trash2, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type Message = Database['public']['Tables']['user_messages']['Row'];
@@ -23,6 +33,9 @@ const Messages = () => {
   const [newMessage, setNewMessage] = useState("");
   const [otherUser, setOtherUser] = useState<Profile | null>(null);
   const [users, setUsers] = useState<Profile[]>([]); // all users list
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editedText, setEditedText] = useState("");
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const otherUserId = searchParams.get("userId");
 
   // Enable notifications for this chat
@@ -194,6 +207,113 @@ const Messages = () => {
     }
   };
 
+  const startEditMessage = (message: Message) => {
+    setEditingMessageId(message.id);
+    setEditedText(message.text);
+  };
+
+  const cancelEdit = () => {
+    setEditingMessageId(null);
+    setEditedText("");
+  };
+
+  const saveEdit = async (messageId: string, originalText: string) => {
+    if (!editedText.trim() || editedText === originalText) {
+      cancelEdit();
+      return;
+    }
+
+    try {
+      // Fetch current message to get edit history
+      const { data: currentMessage, error: fetchError } = await supabase
+        .from("user_messages")
+        .select("edit_history")
+        .eq("id", messageId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Build new edit history
+      const existingHistory = Array.isArray(currentMessage?.edit_history) 
+        ? currentMessage.edit_history 
+        : [];
+      const newHistory = [
+        ...existingHistory,
+        {
+          text: originalText,
+          edited_at: new Date().toISOString(),
+        },
+      ];
+
+      // Update message
+      const { error } = await supabase
+        .from("user_messages")
+        .update({
+          text: editedText.trim(),
+          edited_at: new Date().toISOString(),
+          edit_history: newHistory as any,
+        })
+        .eq("id", messageId);
+
+      if (error) throw error;
+
+      // Update local state
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                text: editedText.trim(),
+                edited_at: new Date().toISOString(),
+                edit_history: newHistory as any,
+              }
+            : msg
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "Message updated",
+      });
+      cancelEdit();
+    } catch (error) {
+      console.error("Error editing message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to edit message",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from("user_messages")
+        .delete()
+        .eq("id", messageId);
+
+      if (error) throw error;
+
+      // Update local state
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+
+      toast({
+        title: "Success",
+        description: "Message deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete message",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
   // --- IF NO USER SELECTED, SHOW USER LIST ---
   if (!otherUserId) {
     return (
@@ -249,32 +369,94 @@ const Messages = () => {
                   </div>
                 </div>
               )}
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender_id === currentUserId ? "justify-end" : "justify-start"
-                    }`}
-                >
+              {messages.map((message) => {
+                const isSentByUser = message.sender_id === currentUserId;
+                const isEditing = editingMessageId === message.id;
+
+                return (
                   <div
-                    className={`max-w-xs px-4 py-2 rounded-lg ${message.sender_id === currentUserId
-                        ? "bg-primary text-white"
-                        : "bg-muted"
-                      }`}
+                    key={message.id}
+                    className={`flex ${isSentByUser ? "justify-end" : "justify-start"}`}
                   >
-                    <p>{message.text}</p>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs opacity-70">
-                        {new Date(message.created_at).toLocaleTimeString()}
-                      </p>
-                      {message.sender_id === currentUserId && (
-                        <p className="text-xs opacity-70 ml-2">
-                          {message.read ? "✓✓" : "✓"}
-                        </p>
+                    <div
+                      className={`max-w-xs group relative ${
+                        isSentByUser
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      } px-4 py-2 rounded-lg`}
+                    >
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={editedText}
+                            onChange={(e) => setEditedText(e.target.value)}
+                            className="text-sm"
+                            autoFocus
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={cancelEdit}
+                              className="h-6 px-2"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => saveEdit(message.id, message.text)}
+                              className="h-6 px-2"
+                            >
+                              <Check className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p>{message.text}</p>
+                          {message.edited_at && (
+                            <p className="text-xs opacity-60 italic mt-1">
+                              (edited)
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-xs opacity-70">
+                              {new Date(message.created_at || "").toLocaleTimeString()}
+                            </p>
+                            {isSentByUser && (
+                              <p className="text-xs opacity-70 ml-2">
+                                {message.read ? "✓✓" : "✓"}
+                              </p>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Edit/Delete buttons - only show for sent messages */}
+                      {isSentByUser && !isEditing && (
+                        <div className="absolute -right-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => startEditMessage(message)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeletingMessageId(message.id)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <form onSubmit={handleSendMessage} className="border-t p-4 flex gap-2">
@@ -292,6 +474,31 @@ const Messages = () => {
             </form>
           </CardContent>
         </Card>
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog
+          open={!!deletingMessageId}
+          onOpenChange={() => setDeletingMessageId(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete message?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. The message will be permanently
+                deleted.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deletingMessageId && deleteMessage(deletingMessageId)}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
