@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, LogOut, MessageSquare, Bot } from "lucide-react";
+import { BookOpen, User, LogOut, MessageSquare, Bot, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -128,10 +128,23 @@ const Navbar = () => {
                 <Button
                   variant="ghost"
                   onClick={() => navigate("/conversations")}
-                  className="gap-2"
+                  className="gap-2 relative"
                 >
                   <MessageSquare className="h-4 w-4" />
                   Messages
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadMessages}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/search-messages")}
+                  className="gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  Search
                 </Button>
                 <Button
                   variant="ghost"

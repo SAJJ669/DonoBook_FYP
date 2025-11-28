@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import type { Database } from "@/integrations/supabase/types";
 
 type Message = Database['public']['Tables']['user_messages']['Row'];
@@ -32,6 +33,12 @@ const Messages = () => {
       markMessagesAsRead();
     },
   });
+
+  // Typing indicator
+  const conversationId = currentUserId && otherUserId 
+    ? [currentUserId, otherUserId].sort().join("-")
+    : null;
+  const { otherUserTyping, setTyping } = useTypingIndicator(conversationId, currentUserId);
 
   useEffect(() => {
     checkAuth();
@@ -175,6 +182,16 @@ const Messages = () => {
     }
 
     setNewMessage("");
+    setTyping(false); // Stop typing indicator when message is sent
+  };
+
+  const handleTyping = (value: string) => {
+    setNewMessage(value);
+    if (value.trim()) {
+      setTyping(true);
+    } else {
+      setTyping(false);
+    }
   };
 
   // --- IF NO USER SELECTED, SHOW USER LIST ---
@@ -223,6 +240,15 @@ const Messages = () => {
           </CardHeader>
           <CardContent className="p-0">
             <div className="h-96 overflow-y-auto p-4 space-y-4">
+              {otherUserTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-muted px-4 py-2 rounded-lg">
+                    <p className="text-sm text-muted-foreground italic">
+                      {otherUser?.name || "User"} is typing...
+                    </p>
+                  </div>
+                </div>
+              )}
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -255,7 +281,8 @@ const Messages = () => {
               <Input
                 type="text"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => handleTyping(e.target.value)}
+                onBlur={() => setTyping(false)}
                 placeholder="Type your message..."
                 className="flex-1"
               />
