@@ -81,7 +81,7 @@ const Auth = () => {
             if (proofImage) {
               const fileExt = proofImage.name.split('.').pop();
               const fileName = `${data.user.id}/${Date.now()}.${fileExt}`;
-              
+
               const { error: uploadError } = await supabase.storage
                 .from('verification-proofs')
                 .upload(fileName, proofImage);
