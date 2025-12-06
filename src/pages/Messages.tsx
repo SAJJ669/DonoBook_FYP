@@ -48,7 +48,7 @@ const Messages = () => {
   });
 
   // Typing indicator
-  const conversationId = currentUserId && otherUserId 
+  const conversationId = currentUserId && otherUserId
     ? [currentUserId, otherUserId].sort().join("-")
     : null;
   const { otherUserTyping, setTyping } = useTypingIndicator(conversationId, currentUserId);
@@ -234,8 +234,8 @@ const Messages = () => {
       if (fetchError) throw fetchError;
 
       // Build new edit history
-      const existingHistory = Array.isArray(currentMessage?.edit_history) 
-        ? currentMessage.edit_history 
+      const existingHistory = Array.isArray(currentMessage?.edit_history)
+        ? currentMessage.edit_history
         : [];
       const newHistory = [
         ...existingHistory,
@@ -262,11 +262,11 @@ const Messages = () => {
         prev.map((msg) =>
           msg.id === messageId
             ? {
-                ...msg,
-                text: editedText.trim(),
-                edited_at: new Date().toISOString(),
-                edit_history: newHistory as any,
-              }
+              ...msg,
+              text: editedText.trim(),
+              edited_at: new Date().toISOString(),
+              edit_history: newHistory as any,
+            }
             : msg
         )
       );
@@ -360,15 +360,6 @@ const Messages = () => {
           </CardHeader>
           <CardContent className="p-0">
             <div className="h-96 overflow-y-auto p-4 space-y-4">
-              {otherUserTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-muted px-4 py-2 rounded-lg">
-                    <p className="text-sm text-muted-foreground italic">
-                      {otherUser?.name || "User"} is typing...
-                    </p>
-                  </div>
-                </div>
-              )}
               {messages.map((message) => {
                 const isSentByUser = message.sender_id === currentUserId;
                 const isEditing = editingMessageId === message.id;
@@ -379,11 +370,10 @@ const Messages = () => {
                     className={`flex ${isSentByUser ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-xs group relative ${
-                        isSentByUser
+                      className={`max-w-xs group relative ${isSentByUser
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted"
-                      } px-4 py-2 rounded-lg`}
+                        } px-4 py-2 rounded-lg`}
                     >
                       {isEditing ? (
                         <div className="space-y-2">
@@ -457,8 +447,20 @@ const Messages = () => {
                   </div>
                 );
               })}
+
+              {/* Move Typing Indicator Below Messages */}
+              {otherUserTyping && (
+                <div className="flex justify-start mt-2">
+                  <div className="bg-muted px-4 py-2 rounded-lg">
+                    <p className="text-sm text-muted-foreground italic">
+                      {otherUser?.name || "User"} is typing...
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Message input area */}
             <form onSubmit={handleSendMessage} className="border-t p-4 flex gap-2">
               <Input
                 type="text"
