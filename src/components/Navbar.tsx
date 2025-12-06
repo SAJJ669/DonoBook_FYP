@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, LogOut, MessageSquare, Bot } from "lucide-react";
+import { BookOpen, User, LogOut, MessageSquare, Bot, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -11,6 +11,8 @@ const Navbar = () => {
   const { toast } = useToast();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
 
   useEffect(() => {
     // Get initial session
@@ -18,6 +20,7 @@ const Navbar = () => {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkAdminRole(session.user.id);
+        subscribeToUnreadMessages(session.user.id);
       }
     });
 
@@ -26,8 +29,10 @@ const Navbar = () => {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkAdminRole(session.user.id);
+        subscribeToUnreadMessages(session.user.id);
       } else {
         setIsAdmin(false);
+        setUnreadMessages(0);
       }
     });
 
@@ -41,8 +46,44 @@ const Navbar = () => {
       .eq("user_id", userId)
       .eq("role", "admin")
       .maybeSingle();
-    
+
     setIsAdmin(!!data);
+  };
+
+  const subscribeToUnreadMessages = (userId: string) => {
+    // Fetch initial unread count
+    fetchUnreadCount(userId);
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel(`user_messages-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_messages',
+        },
+        () => {
+          // Refetch unread count on any message change
+          fetchUnreadCount(userId);
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  };
+
+  const fetchUnreadCount = async (userId: string) => {
+    const { count, error } = await supabase
+      .from("user_messages")
+      .select("*", { count: "exact", head: true })
+      .eq("receiver_id", userId)
+      .eq("read", false);
+
+    if (!error) {
+      setUnreadMessages(count || 0);
+    }
   };
 
   const handleLogout = async () => {
@@ -86,11 +127,24 @@ const Navbar = () => {
                 </Button>
                 <Button
                   variant="ghost"
-                  onClick={() => navigate("/messages")}
-                  className="gap-2"
+                  onClick={() => navigate("/conversations")}
+                  className="gap-2 relative"
                 >
                   <MessageSquare className="h-4 w-4" />
                   Messages
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadMessages}
+                    </span>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/search-messages")}
+                  className="gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  Search
                 </Button>
                 <Button
                   variant="ghost"
