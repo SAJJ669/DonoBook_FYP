@@ -133,7 +133,7 @@ const Navbar = () => {
           <div className="hidden lg:flex items-center gap-4">
             {user ? (
               <>
-                <Button variant="ghost" onClick={() => navigate("/dashboard")} className="gap-2">
+                <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
                   <Home className="h-4 w-4" />
                   Home
                 </Button>
