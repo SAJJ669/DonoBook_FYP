@@ -138,30 +138,30 @@ const Dashboard = () => {
         )}
         
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-heading font-bold text-foreground">My Books</h1>
+          <h1 className="text-4xl font-heading font-bold text-foreground">My Items</h1>
           <Button
             onClick={() => navigate("/upload")}
             className="bg-primary hover:bg-primary-hover gap-2"
             disabled={userProfile?.user_type === "bookstore" && !userProfile?.verified}
           >
             <Plus className="h-4 w-4" />
-            Upload Book
+            Upload Item
           </Button>
         </div>
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading your books...</p>
+            <p className="text-muted-foreground">Loading your items...</p>
           </div>
         ) : books.length === 0 ? (
           <Card className="shadow-card">
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground mb-4">You haven't uploaded any books yet.</p>
+              <p className="text-muted-foreground mb-4">You haven't uploaded any item yet.</p>
               <Button
                 onClick={() => navigate("/upload")}
                 className="bg-primary hover:bg-primary-hover"
               >
-                Upload Your First Book
+                Upload Your First Item
               </Button>
             </CardContent>
           </Card>

@@ -116,7 +116,7 @@ const Navbar = () => {
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-smooth">
             <BookOpen className="h-8 w-8 text-primary" />
             <span className="text-2xl font-heading font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              BookShare
+              BookNet
             </span>
           </Link>
 
