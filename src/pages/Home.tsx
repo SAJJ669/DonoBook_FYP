@@ -6,41 +6,117 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, BookOpen, Gift, RefreshCw, DollarSign } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, BookOpen, Gift, RefreshCw, Package } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Book = Database['public']['Tables']['books']['Row'];
+type Item = Database['public']['Tables']['items']['Row'];
+
+type ListingItem = {
+  id: string;
+  name: string;
+  type: string;
+  condition: string;
+  description: string | null;
+  image_url: string | null;
+  created_at: string;
+  itemType: 'book' | 'item';
+  grade?: string | null;
+  category: string;
+};
 
 const Home = () => {
   const navigate = useNavigate();
   const [books, setBooks] = useState<Book[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchBooks();
+    fetchListings();
   }, []);
 
-  const fetchBooks = async () => {
+  const fetchListings = async () => {
     try {
-      const { data, error } = await supabase
-        .from("books")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(12);
+      const [booksResult, itemsResult] = await Promise.all([
+        supabase
+          .from("books")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(12),
+        supabase
+          .from("items")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(12)
+      ]);
 
-      if (error) throw error;
-      setBooks(data || []);
+      if (booksResult.error) throw booksResult.error;
+      if (itemsResult.error) throw itemsResult.error;
+      
+      setBooks(booksResult.data || []);
+      setItems(itemsResult.data || []);
     } catch (error) {
-      console.error("Error fetching books:", error);
+      console.error("Error fetching listings:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredBooks = books.filter((book) =>
-    book.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getCombinedListings = (): ListingItem[] => {
+    const bookListings: ListingItem[] = books.map(book => ({
+      id: book.id,
+      name: book.title,
+      type: book.type,
+      condition: book.condition,
+      description: book.description,
+      image_url: book.image_url,
+      created_at: book.created_at,
+      itemType: 'book',
+      grade: book.grade,
+      category: book.category,
+    }));
+
+    const itemListings: ListingItem[] = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      condition: item.condition,
+      description: item.description,
+      image_url: item.image_url,
+      created_at: item.created_at,
+      itemType: 'item',
+      category: item.category,
+    }));
+
+    return [...bookListings, ...itemListings].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  };
+
+  const getFilteredListings = () => {
+    let listings = getCombinedListings();
+    
+    // Filter by type
+    if (filterType === "books") {
+      listings = listings.filter(item => item.itemType === 'book');
+    } else if (filterType === "items") {
+      listings = listings.filter(item => item.itemType === 'item');
+    } else if (filterType !== "all") {
+      listings = listings.filter(item => item.itemType === 'item' && item.category === filterType);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      listings = listings.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    return listings;
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -48,8 +124,6 @@ const Home = () => {
         return <Gift className="h-4 w-4" />;
       case "exchange":
         return <RefreshCw className="h-4 w-4" />;
-      case "sell":
-        return <DollarSign className="h-4 w-4" />;
       default:
         return null;
     }
@@ -58,15 +132,37 @@ const Home = () => {
   const getTypeColor = (type: string) => {
     switch (type) {
       case "donate":
-        return "bg-green-100 text-green-700 border-green-200";
+        return "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
       case "exchange":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "sell":
-        return "bg-purple-100 text-purple-700 border-purple-200";
+        return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
       default:
         return "";
     }
   };
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      bag: "Bag",
+      water_bottle: "Water Bottle",
+      pencil_box: "Pencil Box",
+      lunchbox: "Lunchbox",
+      stationery: "Stationery",
+      other: "Other",
+      textbook: "Textbook",
+      reading_book: "Reading Book",
+    };
+    return labels[category] || category;
+  };
+
+  const handleItemClick = (item: ListingItem) => {
+    if (item.itemType === 'book') {
+      navigate(`/book/${item.id}`);
+    } else {
+      navigate(`/item/${item.id}`);
+    }
+  };
+
+  const filteredListings = getFilteredListings();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-primary-light/20 to-background">
@@ -76,10 +172,10 @@ const Home = () => {
       <section className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-3xl mx-auto space-y-6">
           <h1 className="text-5xl md:text-6xl font-heading font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
-            Share Books, Build Knowledge
+            Share & Exchange
           </h1>
           <p className="text-xl text-muted-foreground">
-            A community platform to donate, exchange, and sell educational books
+            A community platform to donate and exchange books and school supplies
           </p>
           
           {/* Search Bar */}
@@ -87,7 +183,7 @@ const Home = () => {
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
               type="text"
-              placeholder="Search for books..."
+              placeholder="Search for books or items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-12 h-14 text-lg shadow-card"
@@ -100,7 +196,7 @@ const Home = () => {
               onClick={() => navigate("/upload")}
               className="bg-primary hover:bg-primary-hover shadow-soft"
             >
-              Upload a Book
+              Upload an Item
             </Button>
             <Button
               size="lg"
@@ -116,101 +212,119 @@ const Home = () => {
 
       {/* Features Section */}
       <section className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <Card className="shadow-card hover:shadow-soft transition-smooth">
             <CardHeader className="text-center">
               <Gift className="h-12 w-12 mx-auto mb-4 text-primary" />
               <CardTitle className="font-heading">Donate</CardTitle>
-              <CardDescription>Share books with students who need them</CardDescription>
+              <CardDescription>Share items with students who need them</CardDescription>
             </CardHeader>
           </Card>
           <Card className="shadow-card hover:shadow-soft transition-smooth">
             <CardHeader className="text-center">
               <RefreshCw className="h-12 w-12 mx-auto mb-4 text-secondary" />
               <CardTitle className="font-heading">Exchange</CardTitle>
-              <CardDescription>Swap books with other students</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="shadow-card hover:shadow-soft transition-smooth">
-            <CardHeader className="text-center">
-              <DollarSign className="h-12 w-12 mx-auto mb-4 text-accent" />
-              <CardTitle className="font-heading">Sell</CardTitle>
-              <CardDescription>List books for sale at affordable prices</CardDescription>
+              <CardDescription>Swap items with other students</CardDescription>
             </CardHeader>
           </Card>
         </div>
       </section>
 
-      {/* Books Section */}
+      {/* Listings Section */}
       <section className="container mx-auto px-4 pb-16">
-        <h2 className="text-3xl font-heading font-bold mb-8 text-center">
-          Available Books
-        </h2>
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+          <h2 className="text-3xl font-heading font-bold">
+            Available Items
+          </h2>
+          
+          {/* Filter */}
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Items</SelectItem>
+              <SelectItem value="books">Books Only</SelectItem>
+              <SelectItem value="items">Other Items Only</SelectItem>
+              <SelectItem value="bag">Bags</SelectItem>
+              <SelectItem value="water_bottle">Water Bottles</SelectItem>
+              <SelectItem value="pencil_box">Pencil Boxes</SelectItem>
+              <SelectItem value="lunchbox">Lunchboxes</SelectItem>
+              <SelectItem value="stationery">Stationery</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading books...</p>
+            <p className="text-muted-foreground">Loading items...</p>
           </div>
-        ) : filteredBooks.length === 0 ? (
+        ) : filteredListings.length === 0 ? (
           <Card className="shadow-card">
             <CardContent className="py-12 text-center">
-              <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground mb-4">
                 {searchQuery
-                  ? "No books found matching your search."
-                  : "No books available yet. Be the first to share!"}
+                  ? "No items found matching your search."
+                  : "No items available yet. Be the first to share!"}
               </p>
               <Button
                 onClick={() => navigate("/upload")}
                 className="bg-primary hover:bg-primary-hover"
               >
-                Upload a Book
+                Upload an Item
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredBooks.map((book) => (
+            {filteredListings.map((item) => (
               <Card
-                key={book.id}
+                key={`${item.itemType}-${item.id}`}
                 className="shadow-card hover:shadow-soft transition-smooth cursor-pointer group"
-                onClick={() => navigate(`/book/${book.id}`)}
+                onClick={() => handleItemClick(item)}
               >
                 <CardHeader className="p-0">
-                  {book.image_url ? (
+                  {item.image_url ? (
                     <img
-                      src={book.image_url}
-                      alt={book.title}
+                      src={item.image_url}
+                      alt={item.name}
                       className="w-full h-48 object-cover rounded-t-lg"
                     />
                   ) : (
                     <div className="w-full h-48 bg-gradient-primary rounded-t-lg flex items-center justify-center">
-                      <BookOpen className="h-16 w-16 text-white" />
+                      {item.itemType === 'book' ? (
+                        <BookOpen className="h-16 w-16 text-white" />
+                      ) : (
+                        <Package className="h-16 w-16 text-white" />
+                      )}
                     </div>
                   )}
                 </CardHeader>
                 <CardContent className="p-4">
                   <CardTitle className="font-heading text-lg mb-2 group-hover:text-primary transition-smooth">
-                    {book.title}
+                    {item.name}
                   </CardTitle>
                   <div className="space-y-2">
-                    {book.grade && (
-                      <p className="text-sm text-muted-foreground">Grade: {book.grade}</p>
+                    {item.itemType === 'book' && item.grade && (
+                      <p className="text-sm text-muted-foreground">Grade: {item.grade}</p>
                     )}
                     <div className="flex gap-2 flex-wrap">
-                      <Badge variant="outline" className={getTypeColor(book.type)}>
-                        {getTypeIcon(book.type)}
-                        <span className="ml-1 capitalize">{book.type}</span>
+                      <Badge variant="outline" className={getTypeColor(item.type)}>
+                        {getTypeIcon(item.type)}
+                        <span className="ml-1 capitalize">{item.type}</span>
                       </Badge>
                       <Badge variant="outline">
-                        {book.condition === "new" ? "New" : "Used"}
+                        {item.condition === "new" ? "New" : "Used"}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {item.itemType === 'book' ? (
+                          <><BookOpen className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>
+                        ) : (
+                          <><Package className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>
+                        )}
                       </Badge>
                     </div>
-                    {book.type === "sell" && book.price && (
-                      <p className="text-lg font-semibold text-primary">
-                        ${Number(book.price).toFixed(2)}
-                      </p>
-                    )}
                   </div>
                 </CardContent>
               </Card>
