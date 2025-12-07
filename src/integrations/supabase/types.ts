@@ -241,6 +241,45 @@ export type Database = {
         }
         Relationships: []
       }
+      items: {
+        Row: {
+          category: Database["public"]["Enums"]["item_category"]
+          condition: Database["public"]["Enums"]["book_condition"]
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          owner_id: string
+          type: Database["public"]["Enums"]["item_type"]
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["item_category"]
+          condition: Database["public"]["Enums"]["book_condition"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          owner_id: string
+          type: Database["public"]["Enums"]["item_type"]
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["item_category"]
+          condition?: Database["public"]["Enums"]["book_condition"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          owner_id?: string
+          type?: Database["public"]["Enums"]["item_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           created_at: string
@@ -388,6 +427,14 @@ export type Database = {
       book_category: "textbook" | "reading_book"
       book_condition: "new" | "used"
       book_type: "donate" | "exchange" | "sell"
+      item_category:
+        | "bag"
+        | "water_bottle"
+        | "pencil_box"
+        | "lunchbox"
+        | "stationery"
+        | "other"
+      item_type: "donate" | "exchange"
       user_type: "user" | "bookstore"
     }
     CompositeTypes: {
@@ -520,6 +567,15 @@ export const Constants = {
       book_category: ["textbook", "reading_book"],
       book_condition: ["new", "used"],
       book_type: ["donate", "exchange", "sell"],
+      item_category: [
+        "bag",
+        "water_bottle",
+        "pencil_box",
+        "lunchbox",
+        "stationery",
+        "other",
+      ],
+      item_type: ["donate", "exchange"],
       user_type: ["user", "bookstore"],
     },
   },

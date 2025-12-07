@@ -6,8 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import UploadBook from "./pages/UploadBook";
+import UploadItem from "./pages/UploadItem";
 import BookDetails from "./pages/BookDetails";
+import ItemDetails from "./pages/ItemDetails";
 import Conversations from "./pages/Conversations";
 import Messages from "./pages/Messages";
 import Assistant from "./pages/Assistant";
@@ -27,8 +28,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/upload" element={<UploadBook />} />
+          <Route path="/upload" element={<UploadItem />} />
           <Route path="/book/:id" element={<BookDetails />} />
+          <Route path="/item/:id" element={<ItemDetails />} />
           <Route path="/conversations" element={<Conversations />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/search-messages" element={<SearchMessages />} />
