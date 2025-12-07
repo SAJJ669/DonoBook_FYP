@@ -1,11 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, LogOut, MessageSquare, Bot, Search, Home, Menu, X } from "lucide-react";
+import { BookOpen, User, LogOut, MessageSquare, Bot, Search, Home, Menu, X, Sun, Moon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useTheme } from "@/hooks/useTheme";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -15,8 +16,8 @@ const Navbar = () => {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Use the useIsMobile hook to determine if the device is mobile
   const isMobile = useIsMobile();
+  const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
     // Get initial session
@@ -108,7 +109,7 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-border shadow-soft">
+    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border shadow-soft">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
@@ -163,9 +164,17 @@ const Navbar = () => {
                   <LogOut className="h-4 w-4" />
                   Logout
                 </Button>
+                <Button variant="ghost" onClick={toggleTheme} className="gap-2">
+                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  {isDark ? "Light Mode" : "Dark Mode"}
+                </Button>
               </>
             ) : (
               <>
+                <Button variant="ghost" onClick={toggleTheme} className="gap-2">
+                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                  {isDark ? "Light Mode" : "Dark Mode"}
+                </Button>
                 <Button variant="ghost" onClick={() => navigate("/auth")}>
                   Login
                 </Button>
@@ -180,7 +189,7 @@ const Navbar = () => {
 
       {/* Mobile Navigation Menu */}
       {isMobile && (
-        <div className={`${isMenuOpen ? "block" : "hidden"} lg:hidden bg-white p-4`}>
+        <div className={`${isMenuOpen ? "block" : "hidden"} lg:hidden bg-background p-4`}>
           {user ? (
             <>
               <Button variant="ghost" onClick={() => navigate("/dashboard")} className="w-full text-left mb-2">
@@ -209,9 +218,17 @@ const Navbar = () => {
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
+              <Button variant="ghost" onClick={toggleTheme} className="w-full text-left mb-2">
+                {isDark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                {isDark ? "Light Mode" : "Dark Mode"}
+              </Button>
             </>
           ) : (
             <>
+              <Button variant="ghost" onClick={toggleTheme} className="w-full text-left mb-2">
+                {isDark ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                {isDark ? "Light Mode" : "Dark Mode"}
+              </Button>
               <Button variant="ghost" onClick={() => navigate("/auth")} className="w-full text-left mb-2">
                 Login
               </Button>
