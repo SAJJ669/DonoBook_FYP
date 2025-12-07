@@ -134,6 +134,10 @@ const Navbar = () => {
             {user ? (
               <>
                 <Button variant="ghost" onClick={() => navigate("/dashboard")} className="gap-2">
+                  <Home className="h-4 w-4" />
+                  Home
+                </Button>
+                <Button variant="ghost" onClick={() => navigate("/dashboard")} className="gap-2">
                   <User className="h-4 w-4" />
                   Dashboard
                 </Button>
@@ -146,10 +150,10 @@ const Navbar = () => {
                     </span>
                   )}
                 </Button>
-                <Button variant="ghost" onClick={() => navigate("/search-messages")} className="gap-2">
+                {/* <Button variant="ghost" onClick={() => navigate("/search-messages")} className="gap-2">
                   <Search className="h-4 w-4" />
                   Search
-                </Button>
+                </Button> */}
                 <Button variant="ghost" onClick={() => navigate("/assistant")} className="gap-2">
                   <Bot className="h-4 w-4" />
                   Assistant
