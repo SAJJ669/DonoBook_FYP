@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, BookOpen, Gift, RefreshCw, Package } from "lucide-react";
+import { Search, BookOpen, Gift, RefreshCw, Package, Lamp, PencilRuler, ShoppingBag } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Book = Database['public']['Tables']['books']['Row'];
@@ -55,7 +55,7 @@ const Home = () => {
 
       if (booksResult.error) throw booksResult.error;
       if (itemsResult.error) throw itemsResult.error;
-      
+
       setBooks(booksResult.data || []);
       setItems(itemsResult.data || []);
     } catch (error) {
@@ -98,7 +98,7 @@ const Home = () => {
 
   const getFilteredListings = () => {
     let listings = getCombinedListings();
-    
+
     // Filter by type
     if (filterType === "books") {
       listings = listings.filter(item => item.itemType === 'book');
@@ -107,14 +107,14 @@ const Home = () => {
     } else if (filterType !== "all") {
       listings = listings.filter(item => item.itemType === 'item' && item.category === filterType);
     }
-    
+
     // Filter by search query
     if (searchQuery) {
       listings = listings.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     return listings;
   };
 
@@ -167,17 +167,19 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-primary-light/20 to-background">
       <Navbar />
-      
+
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-3xl mx-auto space-y-6">
           <h1 className="text-5xl md:text-6xl font-heading font-bold bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
             Share & Exchange
           </h1>
-          <p className="text-xl text-muted-foreground">
-            A community platform to donate and exchange books and school supplies
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Beyond just books—our platform is a complete ecosystem for school essentials.
+            Whether it's a sturdy backpack, a complete stationary set, or a much-needed textbook,
+            we connect students to ensure no resource goes to waste.
           </p>
-          
+
           {/* Search Bar */}
           <div className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
@@ -210,8 +212,102 @@ const Home = () => {
         </div>
       </section>
 
+      <div className="container mx-auto py-20 px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-heading font-bold mb-4">Categories at a Glance</h2>
+          <div className="h-1 w-20 bg-primary mx-auto rounded-full" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Academic Gear */}
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-1">
+            <CardHeader className="text-center">
+              <BookOpen className="h-10 w-10 mx-auto mb-4 text-primary" />
+              <CardTitle>Academic Gear</CardTitle>
+              <CardDescription>Textbooks, reference guides, and specialized lab manuals.</CardDescription>
+            </CardHeader>
+          </Card>
+
+          {/* Daily Essentials */}
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-1">
+            <CardHeader className="text-center">
+              <ShoppingBag className="h-10 w-10 mx-auto mb-4 text-secondary" />
+              <CardTitle>Daily Essentials</CardTitle>
+              <CardDescription>Ergonomic school bags, lunch boxes, and water bottles.</CardDescription>
+            </CardHeader>
+          </Card>
+
+          {/* Writing & Tools */}
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-1">
+            <CardHeader className="text-center">
+              <PencilRuler className="h-10 w-10 mx-auto mb-4 text-primary" />
+              <CardTitle>Writing & Tools</CardTitle>
+              <CardDescription>Pencil boxes, geometry sets, calculators, and art supplies.</CardDescription>
+            </CardHeader>
+          </Card>
+
+          {/* Study Space */}
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-1">
+            <CardHeader className="text-center">
+              <Lamp className="h-10 w-10 mx-auto mb-4 text-secondary" />
+              <CardTitle>Study Space</CardTitle>
+              <CardDescription>Desk organizers, lamps, and unused notebooks.</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+
+      <section className="bg-primary/5 py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center gap-12">
+            {/* Text Content */}
+            <div className="md:w-1/2 space-y-6">
+              <h2 className="text-3xl md:text-4xl font-heading font-bold text-primary">
+                Give Every Supply a Second Life
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed italic">
+                "Every semester, millions of stationary items and school bags are discarded
+                while still in perfect condition. Our platform bridges the gap between students
+                who have finished their journey and those just beginning."
+              </p>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                From high-quality lunch boxes to professional-grade calculators, we help you
+                find what you need and give away what you don't—all while protecting the
+                planet and your wallet.
+              </p>
+            </div>
+
+            {/* Decorative Visual Box */}
+            <div className="md:w-1/2 bg-white p-8 rounded-2xl shadow-xl border-t-4 border-primary">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="p-4 border rounded-lg">
+                  <span className="block text-2xl font-bold text-primary">Reduce</span>
+                  <span className="text-xs text-muted-foreground uppercase">Waste</span>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <span className="block text-2xl font-bold text-secondary">Reuse</span>
+                  <span className="text-xs text-muted-foreground uppercase">Supplies</span>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <span className="block text-2xl font-bold text-primary">Recycle</span>
+                  <span className="text-xs text-muted-foreground uppercase">Resources</span>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <span className="block text-2xl font-bold text-secondary">Reward</span>
+                  <span className="text-xs text-muted-foreground uppercase">Community</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className="container mx-auto px-4 py-12">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-heading font-bold mb-4">How to Participate</h2>
+          <div className="h-1 w-20 bg-primary mx-auto rounded-full" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <Card className="shadow-card hover:shadow-soft transition-smooth">
             <CardHeader className="text-center">
@@ -236,7 +332,7 @@ const Home = () => {
           <h2 className="text-3xl font-heading font-bold">
             Available Items
           </h2>
-          
+
           {/* Filter */}
           <Select value={filterType} onValueChange={setFilterType}>
             <SelectTrigger className="w-[200px]">
@@ -336,4 +432,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default Home;	
