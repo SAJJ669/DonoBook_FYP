@@ -6,47 +6,67 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS Preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not configured in Supabase Secrets');
     }
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are the BookShare Assistant, a helpful AI guide for the BookShare platform. Help users understand how to use the app, find books, donate or exchange textbooks, and navigate features. Be friendly, concise, and educational-focused.'
+    // Convert standard chat messages to Gemini's specific "contents" format
+    // Note: Gemini uses "model" instead of "assistant"
+    const contents = messages.map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: contents,
+          // This is where your specific instructions live
+          systemInstruction: {
+            parts: [{ 
+              text: 'You are the BookShare Assistant, a helpful AI guide for the BookShare platform. Help users understand how to use the app, find books, donate or exchange textbooks, and navigate features. Be friendly, concise, and educational-focused.' 
+            }]
           },
-          ...messages
-        ],
-      }),
-    });
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500,
+          }
+        }),
+      }
+    );
 
     const data = await response.json();
-    const message = data.choices?.[0]?.message?.content || 'I apologize, but I could not process that request.';
+
+    if (data.error) {
+      console.error('Gemini API Error:', data.error);
+      throw new Error(data.error.message || 'Error from Gemini API');
+    }
+
+    // Extract the text content from Gemini's response structure
+    const assistantText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                         'I apologize, but I could not process that request.';
 
     return new Response(
-      JSON.stringify({ message }),
+      JSON.stringify({ message: assistantText }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Edge Function Error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

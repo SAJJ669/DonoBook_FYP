@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { Rating } from "@/components/ui/rating";
 
 type Item = Database['public']['Tables']['items']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -20,6 +21,7 @@ const ItemDetails = () => {
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
 
   useEffect(() => {
     fetchItemDetails();
