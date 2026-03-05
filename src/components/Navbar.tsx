@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
+import { motion } from "framer-motion";
 
 const Navbar = () => {
   const navigate = useNavigate();
