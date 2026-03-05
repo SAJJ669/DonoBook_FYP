@@ -249,7 +249,7 @@ const Navbar = () => {
           )}
         </div>
       )}
-    </nav>
+    </motion.nav>
   );
 };
 
