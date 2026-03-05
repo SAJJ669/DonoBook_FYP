@@ -98,9 +98,6 @@ const Home = () => {
         return { newBooks, newItems };
       };
       const { newBooks, newItems } = await fetchMore();
-      const [booksRes, itemsRes] = await Promise.all(promises);
-      const newBooks = booksRes.data || [];
-      const newItems = itemsRes.data || [];
       if (newBooks.length > 0) {
         setBooks(prev => [...prev, ...newBooks]);
         setBooksOffset(prev => prev + newBooks.length);
