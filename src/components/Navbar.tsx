@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
+import { motion } from "framer-motion";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -109,7 +110,12 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border shadow-soft">
+    <motion.nav
+      initial={{ opacity: 0, y: -16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.25, 0.4, 0, 1] }}
+      className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border shadow-soft"
+    >
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
@@ -243,7 +249,7 @@ const Navbar = () => {
           )}
         </div>
       )}
-    </nav>
+    </motion.nav>
   );
 };
 
