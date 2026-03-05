@@ -87,14 +87,14 @@ const Home = () => {
       const promises: Promise<any>[] = [];
       if (hasMoreBooks) {
         promises.push(
-          supabase.from("books").select("*").order("created_at", { ascending: false }).range(booksOffset, booksOffset + PAGE_SIZE - 1)
+          supabase.from("books").select("*").order("created_at", { ascending: false }).range(booksOffset, booksOffset + PAGE_SIZE - 1).then(res => res)
         );
       } else {
         promises.push(Promise.resolve({ data: [], error: null }));
       }
       if (hasMoreItems) {
         promises.push(
-          supabase.from("items").select("*").order("created_at", { ascending: false }).range(itemsOffset, itemsOffset + PAGE_SIZE - 1)
+          supabase.from("items").select("*").order("created_at", { ascending: false }).range(itemsOffset, itemsOffset + PAGE_SIZE - 1).then(res => res)
         );
       } else {
         promises.push(Promise.resolve({ data: [], error: null }));
