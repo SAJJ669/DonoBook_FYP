@@ -84,21 +84,20 @@ const Home = () => {
     if (loadingMore || (!hasMoreBooks && !hasMoreItems)) return;
     setLoadingMore(true);
     try {
-      const promises: Promise<any>[] = [];
-      if (hasMoreBooks) {
-        promises.push(
-          supabase.from("books").select("*").order("created_at", { ascending: false }).range(booksOffset, booksOffset + PAGE_SIZE - 1).then(res => res)
-        );
-      } else {
-        promises.push(Promise.resolve({ data: [], error: null }));
-      }
-      if (hasMoreItems) {
-        promises.push(
-          supabase.from("items").select("*").order("created_at", { ascending: false }).range(itemsOffset, itemsOffset + PAGE_SIZE - 1).then(res => res)
-        );
-      } else {
-        promises.push(Promise.resolve({ data: [], error: null }));
-      }
+      const fetchMore = async () => {
+        let newBooks: Book[] = [];
+        let newItems: Item[] = [];
+        if (hasMoreBooks) {
+          const { data } = await supabase.from("books").select("*").order("created_at", { ascending: false }).range(booksOffset, booksOffset + PAGE_SIZE - 1);
+          newBooks = data || [];
+        }
+        if (hasMoreItems) {
+          const { data } = await supabase.from("items").select("*").order("created_at", { ascending: false }).range(itemsOffset, itemsOffset + PAGE_SIZE - 1);
+          newItems = data || [];
+        }
+        return { newBooks, newItems };
+      };
+      const { newBooks, newItems } = await fetchMore();
       const [booksRes, itemsRes] = await Promise.all(promises);
       const newBooks = booksRes.data || [];
       const newItems = itemsRes.data || [];
