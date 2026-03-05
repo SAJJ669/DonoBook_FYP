@@ -196,6 +196,8 @@ const Home = () => {
           </motion.h1>
           <motion.p variants={fadeUp} transition={{ duration: 0.6, delay: 0.1 }} className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Beyond just books—our platform is a complete ecosystem for school essentials.
+            Whether it's a sturdy backpack, a complete stationary set, or a much-needed textbook,
+            we connect students to ensure no resource goes to waste.
           </motion.p>
 
           <motion.div variants={fadeUp} transition={{ duration: 0.5, delay: 0.2 }} className="relative max-w-2xl mx-auto">
