@@ -21,7 +21,7 @@ const ItemDetails = () => {
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
+
 
   useEffect(() => {
     fetchItemDetails();
@@ -135,9 +135,11 @@ const ItemDetails = () => {
                   className="w-full h-96 object-cover rounded-lg"
                 />
               ) : (
-                <div className="w-full h-96 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <Package className="h-24 w-24 text-white" />
-                </div>
+              <img
+                src="/placeholder.svg"
+                alt="placeholder"
+                className="w-full h-96 object-cover rounded-lg"
+              />
               )}
             </CardContent>
           </Card>

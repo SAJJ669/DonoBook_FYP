@@ -349,9 +349,11 @@ const Home = () => {
                       {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover rounded-t-lg" />
                       ) : (
-                        <div className="w-full h-48 bg-gradient-primary rounded-t-lg flex items-center justify-center">
-                          {item.itemType === 'book' ? <BookOpen className="h-16 w-16 text-white" /> : <Package className="h-16 w-16 text-white" />}
-                        </div>
+                        <img
+                          src="/placeholder.svg"
+                          alt="placeholder"
+                          className="w-full h-48 object-cover rounded-t-lg"
+                        />
                       )}
                     </CardHeader>
                     <CardContent className="p-4">

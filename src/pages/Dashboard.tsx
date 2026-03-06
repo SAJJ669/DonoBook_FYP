@@ -180,9 +180,7 @@ const Dashboard = () => {
                   {books.map((book) => (
                     <Card key={book.id} className="shadow-card hover:shadow-soft transition-smooth">
                       <CardHeader>
-                        {book.image_url && (
-                          <img src={book.image_url} alt={book.title} className="w-full h-48 object-cover rounded-lg mb-4" />
-                        )}
+                        <img src={book.image_url || "/placeholder.svg"} alt={book.title} className="w-full h-48 object-cover rounded-lg mb-4" />
                         <CardTitle className="font-heading">{book.title}</CardTitle>
                         <CardDescription>
                           {book.grade && `Grade: ${book.grade} • `}{book.category} • {book.condition}
@@ -222,9 +220,7 @@ const Dashboard = () => {
                   {items.map((item) => (
                     <Card key={item.id} className="shadow-card hover:shadow-soft transition-smooth">
                       <CardHeader>
-                        {item.image_url && (
-                          <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover rounded-lg mb-4" />
-                        )}
+                        <img src={item.image_url || "/placeholder.svg"} alt={item.name} className="w-full h-48 object-cover rounded-lg mb-4" />
                         <CardTitle className="font-heading">{item.name}</CardTitle>
                         <CardDescription>
                           {item.category} • {item.condition} • {item.type}
