@@ -60,8 +60,8 @@ const Home = () => {
   const fetchInitial = async () => {
     try {
       const [booksResult, itemsResult] = await Promise.all([
-        supabase.from("books").select("*").order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1),
-        supabase.from("items").select("*").order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1),
+        supabase.from("books").select("*").order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1).eq('is_available', true),
+        supabase.from("items").select("*").order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1).eq('is_available', true),
       ]);
       if (booksResult.error) throw booksResult.error;
       if (itemsResult.error) throw itemsResult.error;
