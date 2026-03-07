@@ -5,9 +5,10 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MessageSquare, Gift, RefreshCw } from "lucide-react";
+import { ArrowLeft, MessageSquare, Gift, RefreshCw, Clock, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { StatusBadge } from "@/components/StatusBadge";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -118,12 +119,16 @@ const BookDetails = () => {
                 <img
                   src={book.image_url}
                   alt={book.title}
-                  className="w-full h-96 object-cover rounded-lg"
+                  className={`w-full h-96 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""
+                    }`}
+
                 />
               ) : (
-                <div className="w-full h-96 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <span className="text-6xl">📚</span>
-                </div>
+                <img
+                  src="/placeholder.svg"
+                  alt="placeholder"
+                  className="w-full h-96 object-cover rounded-lg"
+                />
               )}
             </CardContent>
           </Card>
@@ -131,7 +136,10 @@ const BookDetails = () => {
           <div className="space-y-6">
             <Card className="shadow-card">
               <CardHeader>
-                <CardTitle className="text-3xl font-heading">{book.title}</CardTitle>
+                <div className="flex flex-col items-start">
+                  <StatusBadge status={book.status} />
+                  <CardTitle className="text-3xl font-heading mt-1">{book.title}</CardTitle>
+                </div>
                 <CardDescription>
                   Posted by {owner?.name}
                   {book.grade && ` • Grade ${book.grade}`}
@@ -162,10 +170,15 @@ const BookDetails = () => {
                 {!isOwner && (
                   <Button
                     onClick={handleContact}
-                    className="w-full bg-primary hover:bg-primary-hover gap-2 text-lg py-6"
+                    // DISABLE BUTTON IF NOT AVAILABLE
+                    disabled={book.status !== "available"}
+                    className={`w-full gap-2 text-lg py-6 ${book.status === "available"
+                        ? "bg-primary hover:bg-primary-hover"
+                        : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     <MessageSquare className="h-5 w-5" />
-                    Contact Owner
+                    {book.status === "available" ? "Contact Owner" : "Currently Unavailable"}
                   </Button>
                 )}
 

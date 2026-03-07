@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, BookOpen, Gift, RefreshCw, Package, Lamp, PencilRuler, ShoppingBag, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
+import { StatusBadge } from "@/components/StatusBadge";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -131,12 +132,12 @@ const Home = () => {
     const bookListings: ListingItem[] = books.map(book => ({
       id: book.id, name: book.title, type: book.type, condition: book.condition,
       description: book.description, image_url: book.image_url, created_at: book.created_at,
-      itemType: 'book', grade: book.grade, category: book.category,
+      itemType: 'book', grade: book.grade, category: book.category, is_available: book.is_available, status: book.status
     }));
     const itemListings: ListingItem[] = items.map(item => ({
       id: item.id, name: item.name, type: item.type, condition: item.condition,
       description: item.description, image_url: item.image_url, created_at: item.created_at,
-      itemType: 'item', category: item.category,
+      itemType: 'item', category: item.category, is_available: item.is_available, status: item.status
     }));
     return [...bookListings, ...itemListings].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -162,8 +163,8 @@ const Home = () => {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "donate": return "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
-      case "exchange": return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800";
+      case "donate": return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800";
+      case "exchange": return "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800";
       default: return "";
     }
   };
@@ -368,6 +369,7 @@ const Home = () => {
                           <Badge variant="secondary" className="text-xs">
                             {item.itemType === 'book' ? <><BookOpen className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</> : <><Package className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>}
                           </Badge>
+                          <StatusBadge status={item.status} />
                         </div>
                       </div>
                     </CardContent>

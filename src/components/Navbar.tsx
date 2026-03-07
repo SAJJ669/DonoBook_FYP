@@ -8,6 +8,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
+import { Switch } from "@/components/ui/switch"
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -156,10 +157,6 @@ const Navbar = () => {
                     </span>
                   )}
                 </Button>
-                {/* <Button variant="ghost" onClick={() => navigate("/search-messages")} className="gap-2">
-                  <Search className="h-4 w-4" />
-                  Search
-                </Button> */}
                 <Button variant="ghost" onClick={() => navigate("/assistant")} className="gap-2">
                   <Bot className="h-4 w-4" />
                   Assistant
@@ -174,17 +171,33 @@ const Navbar = () => {
                   <LogOut className="h-4 w-4" />
                   Logout
                 </Button>
-                <Button variant="ghost" onClick={toggleTheme} className="gap-2">
-                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  {isDark ? "Light Mode" : "Dark Mode"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={isDark}
+                    onCheckedChange={toggleTheme}
+                  />
+
+                  {isDark ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )}
+                </div>
               </>
             ) : (
               <>
-                <Button variant="ghost" onClick={toggleTheme} className="gap-2">
-                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  {isDark ? "Light Mode" : "Dark Mode"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={isDark}
+                    onCheckedChange={toggleTheme}
+                  />
+
+                  {isDark ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )}
+                </div>
                 <Button variant="ghost" onClick={() => navigate("/auth")}>
                   Login
                 </Button>

@@ -9,6 +9,7 @@ import { Plus, Edit, Trash2, BookOpen, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EditItemDialog from "@/components/EditItemDialog";
 import type { Database } from "@/integrations/supabase/types";
+import { StatusBadge } from "@/components/StatusBadge";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -180,10 +181,10 @@ const Dashboard = () => {
                   {books.map((book) => (
                     <Card key={book.id} className="shadow-card hover:shadow-soft transition-smooth">
                       <CardHeader>
-                        <img src={book.image_url || "/placeholder.svg"} alt={book.title} className="w-full h-48 object-cover rounded-lg mb-4" />
+                        <img src={book.image_url || "/placeholder.svg"} alt={book.title} className={`w-full h-48 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{book.title}</CardTitle>
                         <CardDescription>
-                          {book.grade && `Grade: ${book.grade} • `}{book.category} • {book.condition}
+                          {book.grade && `Grade: ${book.grade} • `}{book.category} • {book.condition} • <StatusBadge status={book.status} />
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -220,10 +221,10 @@ const Dashboard = () => {
                   {items.map((item) => (
                     <Card key={item.id} className="shadow-card hover:shadow-soft transition-smooth">
                       <CardHeader>
-                        <img src={item.image_url || "/placeholder.svg"} alt={item.name} className="w-full h-48 object-cover rounded-lg mb-4" />
+                        <img src={item.image_url || "/placeholder.svg"} alt={item.name} className={`w-full h-48 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{item.name}</CardTitle>
                         <CardDescription>
-                          {item.category} • {item.condition} • {item.type}
+                          {item.category} • {item.condition} • {item.type} • <StatusBadge status={item.status} />
                         </CardDescription>
                       </CardHeader>
                       <CardContent>

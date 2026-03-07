@@ -9,8 +9,9 @@ import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { Rating } from "@/components/ui/rating";
+import { StatusBadge } from "@/components/StatusBadge";
 
-type Item = Database['public']['Tables']['items']['Row'];
+export type Item = Database['public']['Tables']['items']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
 const ItemDetails = () => {
@@ -132,14 +133,15 @@ const ItemDetails = () => {
                 <img
                   src={item.image_url}
                   alt={item.name}
-                  className="w-full h-96 object-cover rounded-lg"
+                  className={`w-full h-96 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""
+                    }`}
                 />
               ) : (
-              <img
-                src="/placeholder.svg"
-                alt="placeholder"
-                className="w-full h-96 object-cover rounded-lg"
-              />
+                <img
+                  src="/placeholder.svg"
+                  alt="placeholder"
+                  className="w-full h-96 object-cover rounded-lg"
+                />
               )}
             </CardContent>
           </Card>
@@ -147,7 +149,10 @@ const ItemDetails = () => {
           <div className="space-y-6">
             <Card className="shadow-card">
               <CardHeader>
-                <CardTitle className="text-3xl font-heading">{item.name}</CardTitle>
+                <div className="flex flex-col items-start">
+                  <StatusBadge status={item.status} />
+                  <CardTitle className="text-3xl font-heading">{item.name}</CardTitle>
+                </div>
                 <CardDescription>
                   Posted by {owner?.name}
                 </CardDescription>
@@ -177,10 +182,15 @@ const ItemDetails = () => {
                 {!isOwner && (
                   <Button
                     onClick={handleContact}
-                    className="w-full bg-primary hover:bg-primary-hover gap-2 text-lg py-6"
+                    // DISABLE BUTTON IF NOT AVAILABLE
+                    disabled={item.status !== "available"}
+                    className={`w-full gap-2 text-lg py-6 ${item.status === "available"
+                        ? "bg-primary hover:bg-primary-hover"
+                        : "bg-muted text-muted-foreground"
+                      }`}
                   >
                     <MessageSquare className="h-5 w-5" />
-                    Contact Owner
+                    {item.status === "available" ? "Contact Owner" : "Currently Unavailable"}
                   </Button>
                 )}
 
