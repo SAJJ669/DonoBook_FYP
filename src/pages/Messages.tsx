@@ -321,72 +321,72 @@ const Messages = () => {
   };
 
   const sendOffer = async (id: string, title: string, type: 'book' | 'item') => {
-  if (!currentUserId || !otherUserId) return;
+    if (!currentUserId || !otherUserId) return;
 
-  const table = type === 'book' ? 'books' : 'items';
+    const table = type === 'book' ? 'books' : 'items';
 
-  // 1. Update the item status to 'pending' in the DB
-  const { error: statusError } = await supabase
-    .from(table)
-    .update({ status: 'pending' })
-    .eq('id', id);
+    // 1. Update the item status to 'pending' in the DB
+    const { error: statusError } = await supabase
+      .from(table)
+      .update({ status: 'pending', is_available: false })
+      .eq('id', id);
 
-  if (statusError) {
-    toast({ title: "Error", description: "This item is no longer available", variant: "destructive" });
-    return;
-  }
+    if (statusError) {
+      toast({ title: "Error", description: "This item is no longer available", variant: "destructive" });
+      return;
+    }
 
-  // 2. Insert the message (your existing code)
-  const offerData = {
-    sender_id: currentUserId,
-    receiver_id: otherUserId,
-    is_transaction_offer: true,
-    text: `I would like to give/exchange my ${type}: "${title}". Do you accept?`,
-    transaction_status: 'pending',
-    [type === 'book' ? 'book_id' : 'item_id']: id 
+    // 2. Insert the message (your existing code)
+    const offerData = {
+      sender_id: currentUserId,
+      receiver_id: otherUserId,
+      is_transaction_offer: true,
+      text: `I would like to give/exchange my ${type}: "${title}". Do you accept?`,
+      transaction_status: 'pending',
+      [type === 'book' ? 'book_id' : 'item_id']: id
+    };
+
+    await supabase.from("user_messages").insert([offerData]);
+
+    // Refresh inventory so the book disappears from the "Offer" list immediately
+    fetchUserInventory();
+    toast({ title: "Offer Sent!", description: `${title} is now pending.` });
   };
-
-  await supabase.from("user_messages").insert([offerData]);
-  
-  // Refresh inventory so the book disappears from the "Offer" list immediately
-  fetchUserInventory(); 
-  toast({ title: "Offer Sent!", description: `${title} is now pending.` });
-};
 
   // Handle Accept/Decline Logic
   const handleTransaction = async (message: any, accept: boolean) => {
-  try {
-    const table = message.book_id ? "books" : "items";
-    const targetId = message.book_id || message.item_id;
+    try {
+      const table = message.book_id ? "books" : "items";
+      const targetId = message.book_id || message.item_id;
 
-    // 1. Update Message Status
-    await supabase
-      .from("user_messages")
-      .update({ transaction_status: accept ? "accepted" : "declined" })
-      .eq("id", message.id);
+      // 1. Update Message Status
+      await supabase
+        .from("user_messages")
+        .update({ transaction_status: accept ? "accepted" : "declined" })
+        .eq("id", message.id);
 
-    // 2. Update Item Status
-    const newStatus = accept ? "claimed" : "available";
-    const { error: updateError } = await supabase
-      .from(table)
-      .update({ 
-        status: newStatus,
-        is_available: accept ? false : true // Keeping this for backward compatibility
-      })
-      .eq("id", targetId);
+      // 2. Update Item Status
+      const newStatus = accept ? "claimed" : "available";
+      const { error: updateError } = await supabase
+        .from(table)
+        .update({
+          status: newStatus,
+          is_available: accept ? false : true // Keeping this for backward compatibility
+        })
+        .eq("id", targetId);
 
-    if (updateError) throw updateError;
+      if (updateError) throw updateError;
 
-    toast({
-      title: accept ? "Transaction Accepted" : "Offer Declined",
-      description: accept ? "Item marked as claimed." : "Item is now available for others again.",
-    });
+      toast({
+        title: accept ? "Transaction Accepted" : "Offer Declined",
+        description: accept ? "Item marked as claimed." : "Item is now available for others again.",
+      });
 
-    fetchMessages();
-  } catch (error) {
-    console.error(error);
-  }
-};
+      fetchMessages();
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   // For Fetching User Uploads when user wants to offer books/items
   const fetchUserInventory = async () => {

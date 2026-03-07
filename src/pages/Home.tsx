@@ -369,7 +369,7 @@ const Home = () => {
                           <Badge variant="secondary" className="text-xs">
                             {item.itemType === 'book' ? <><BookOpen className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</> : <><Package className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>}
                           </Badge>
-                          <StatusBadge status={item.status} />
+                          {/* <StatusBadge status={item.status} /> */}
                         </div>
                       </div>
                     </CardContent>
