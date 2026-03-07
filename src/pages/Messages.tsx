@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
@@ -43,6 +43,20 @@ const Messages = () => {
   const [userBooks, setUserBooks] = useState<any[]>([]);
   const [userItems, setUserItems] = useState<any[]>([]);
   const [offerTab, setOfferTab] = useState<'books' | 'items'>('books');
+
+  // For loading chat from last conversation
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // To scroll chat at bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  }, []);
 
   // Enable notifications for this chat
   useMessageNotifications({
@@ -371,7 +385,8 @@ const Messages = () => {
         .from(table)
         .update({
           status: newStatus,
-          is_available: accept ? false : true // Keeping this for backward compatibility
+          is_available: accept ? false : true,
+          receiver_id: accept ? message.receiver_id : null // Save who received it!
         })
         .eq("id", targetId);
 
@@ -563,12 +578,12 @@ const Messages = () => {
 
                       {/* Edit/Delete buttons - only show for sent messages */}
                       {isSentByUser && !isEditing && (
-                        <div className="absolute -right-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => startEditMessage(message)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-200 hover:text-blue-700"
                           >
                             <Edit2 className="h-3 w-3" />
                           </Button>
@@ -576,7 +591,7 @@ const Messages = () => {
                             size="sm"
                             variant="ghost"
                             onClick={() => setDeletingMessageId(message.id)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="h-8 w-8 p-0 text-destructive bg-red-50 hover:bg-red-200 hover:text-destructive"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -586,6 +601,7 @@ const Messages = () => {
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
 
               {/* Move Typing Indicator Below Messages */}
               {otherUserTyping && (

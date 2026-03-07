@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, BookOpen, Package } from "lucide-react";
+import { Plus, Edit, Trash2, BookOpen, Package, RefreshCw, Gift, Badge } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EditItemDialog from "@/components/EditItemDialog";
 import type { Database } from "@/integrations/supabase/types";
@@ -27,6 +27,10 @@ const Dashboard = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editItem, setEditItem] = useState<Book | Item | null>(null);
   const [editType, setEditType] = useState<'book' | 'item'>('book');
+
+  // To track items/books sent by owners
+  const [givenAway, setGivenAway] = useState<any[]>([]);
+  const [receivedItems, setReceivedItems] = useState<any[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -61,14 +65,38 @@ const Dashboard = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const [booksRes, itemsRes] = await Promise.all([
-        supabase.from("books").select("*").eq("owner_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("items").select("*").eq("owner_id", user.id).order("created_at", { ascending: false }),
+      const [booksRes, itemsRes, givenBooksRes, givenItemsRes, receivedBooksRes, receivedItemsRes] = await Promise.all([
+        // 1. Currently Owned & Available/Pending
+        supabase.from("books").select("*").eq("owner_id", user.id).neq("status", "claimed"),
+        supabase.from("items").select("*").eq("owner_id", user.id).neq("status", "claimed"),
+
+        // 2. Given Away (Owned by me, but status is claimed)
+
+        /* The profiles!receiver_id(name) syntax tells Supabase: "Look at the receiver_id column, 
+         find that person in the profiles table, and just give me their name." */
+        supabase.from("books").select(`*, receiver:profiles!books_receiver_id_fkey(name)`).eq("owner_id", user.id).eq("status", "claimed"),
+        supabase.from("items").select(`*, receiver:profiles!items_receiver_id_fkey(name)`).eq("owner_id", user.id).eq("status", "claimed"),
+
+        // 3. Received (Owned by others, but receiver_id is me)
+        supabase.from("books").select(`*, owner:profiles!books_owner_id_fkey(name)`).eq("receiver_id", user.id),
+        supabase.from("items").select(`*, owner:profiles!items_owner_id_fkey(name)`).eq("receiver_id", user.id)
       ]);
+
       if (booksRes.error) throw booksRes.error;
       if (itemsRes.error) throw itemsRes.error;
       setBooks(booksRes.data || []);
       setItems(itemsRes.data || []);
+
+      setGivenAway([
+        ...(givenBooksRes.data || []),
+        ...(givenItemsRes.data || [])
+      ]);
+
+      setReceivedItems([
+        ...(receivedBooksRes.data || []),
+        ...(receivedItemsRes.data || [])
+      ]);
+
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to load";
       toast({ title: "Error", description: message, variant: "destructive" });
@@ -140,7 +168,7 @@ const Dashboard = () => {
         )}
 
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-heading font-bold text-foreground">My Items</h1>
+          <h1 className="text-4xl font-heading font-bold text-foreground">My Inventory</h1>
           <Button
             onClick={() => navigate("/upload")}
             className="bg-primary hover:bg-primary-hover gap-2"
@@ -153,7 +181,7 @@ const Dashboard = () => {
 
         {loading ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading your items...</p>
+            <p className="text-muted-foreground">Loading your inventory...</p>
           </div>
         ) : (
           <Tabs defaultValue="books">
@@ -163,6 +191,9 @@ const Dashboard = () => {
               </TabsTrigger>
               <TabsTrigger value="items" className="gap-2">
                 <Package className="h-4 w-4" /> Items ({items.length})
+              </TabsTrigger>
+              <TabsTrigger value="history" className="gap-2">
+                <RefreshCw className="h-4 w-4" /> History ({givenAway.length + receivedItems.length})
               </TabsTrigger>
             </TabsList>
 
@@ -184,8 +215,11 @@ const Dashboard = () => {
                         <img src={book.image_url || "/placeholder.svg"} alt={book.title} className={`w-full h-48 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{book.title}</CardTitle>
                         <CardDescription>
-                          {book.grade && `Grade: ${book.grade} • `}{book.category} • {book.condition} • <StatusBadge status={book.status} />
+                          {book.grade && `Grade: ${book.grade} • `}{book.category} • {book.condition}
                         </CardDescription>
+                        <div className="mt-2">
+                          <StatusBadge status={book.status} />
+                        </div>
                       </CardHeader>
                       <CardContent>
                         <div className="flex gap-2">
@@ -245,6 +279,50 @@ const Dashboard = () => {
                 </div>
               )}
             </TabsContent>
+            <TabsContent value="history">
+              <div className="space-y-8">
+                <section>
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Gift className="h-5 w-5 text-primary" /> Given Away
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {givenAway.map((item) => (
+                      <Card key={item.id} className="opacity-80 grayscale-[0.3]">
+                        <CardHeader className="p-4">
+                          <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
+                          <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
+                          <StatusBadge status="claimed" />
+                          <p className="text-xs text-muted-foreground mt-1 font-medium">
+                            🎁 Given to: <span className="text-foreground">{item.receiver?.name || "Unknown"}</span>
+                          </p>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <Package className="h-5 w-5 text-green-600" /> Received
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {receivedItems.map((item) => (
+                      <Card key={item.id} className="border-green-200 bg-green-50/30">
+                        <CardHeader className="p-4">
+                          <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
+                          <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
+                          <Badge variant="outline" className="bg-green-100 text-green-700">Received</Badge>
+                        </CardHeader>
+                        <p className="text-xs text-muted-foreground mt-1 font-medium">
+                          📩 Received from: <span className="text-foreground">{item.owner?.name || "Unknown"}</span>
+                        </p>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </TabsContent>
+
           </Tabs>
         )}
       </div>

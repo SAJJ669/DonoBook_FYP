@@ -170,7 +170,7 @@ const BookDetails = () => {
                 {!isOwner && (
                   <Button
                     onClick={handleContact}
-                    // DISABLE BUTTON IF NOT AVAILABLE
+                    // DISABLE BUTTON IF NOT AVAILABLE (Might change this logic in future)
                     disabled={book.status !== "available"}
                     className={`w-full gap-2 text-lg py-6 ${book.status === "available"
                         ? "bg-primary hover:bg-primary-hover"
