@@ -11,6 +11,7 @@ import { Search, BookOpen, Gift, RefreshCw, Package, Lamp, PencilRuler, Shopping
 import { motion } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
 import { StatusBadge } from "@/components/StatusBadge";
+import { UserReputation } from '@/components/UserReputation'
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -26,6 +27,10 @@ type ListingItem = {
   itemType: 'book' | 'item';
   grade?: string | null;
   category: string;
+  owner?: {
+    name: string;
+    received_reviews: { rating: number }[];
+  };
 };
 
 const PAGE_SIZE = 12;
@@ -60,16 +65,31 @@ const Home = () => {
 
   const fetchInitial = async () => {
     try {
+      // We define the select string once since it's used for both
+      const bookSelect = `*, owner:profiles!books_owner_id_fkey(name, received_reviews:reviews!reviewee_id(rating))`;
+      const itemSelect = `*, owner:profiles!items_owner_id_fkey(name, received_reviews:reviews!reviewee_id(rating))`;
+
       const [booksResult, itemsResult] = await Promise.all([
-        supabase.from("books").select("*").order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1).eq('is_available', true),
-        supabase.from("items").select("*").order("created_at", { ascending: false }).range(0, PAGE_SIZE - 1).eq('is_available', true),
+        supabase.from("books")
+          .select(bookSelect)
+          .order("created_at", { ascending: false })
+          .range(0, PAGE_SIZE - 1)
+          .eq('is_available', true),
+        supabase.from("items")
+          .select(itemSelect)
+          .order("created_at", { ascending: false })
+          .range(0, PAGE_SIZE - 1)
+          .eq('is_available', true),
       ]);
+
       if (booksResult.error) throw booksResult.error;
       if (itemsResult.error) throw itemsResult.error;
+
       const bData = booksResult.data || [];
       const iData = itemsResult.data || [];
-      setBooks(bData);
-      setItems(iData);
+
+      setBooks(bData as any);
+      setItems(iData as any);
       setBooksOffset(bData.length);
       setItemsOffset(iData.length);
       setHasMoreBooks(bData.length === PAGE_SIZE);
@@ -85,25 +105,36 @@ const Home = () => {
     if (loadingMore || (!hasMoreBooks && !hasMoreItems)) return;
     setLoadingMore(true);
     try {
-      const fetchMore = async () => {
-        let newBooks: Book[] = [];
-        let newItems: Item[] = [];
-        if (hasMoreBooks) {
-          const { data } = await supabase.from("books").select("*").order("created_at", { ascending: false }).range(booksOffset, booksOffset + PAGE_SIZE - 1);
-          newBooks = data || [];
-        }
-        if (hasMoreItems) {
-          const { data } = await supabase.from("items").select("*").order("created_at", { ascending: false }).range(itemsOffset, itemsOffset + PAGE_SIZE - 1);
-          newItems = data || [];
-        }
-        return { newBooks, newItems };
-      };
-      const { newBooks, newItems } = await fetchMore();
+      const bookSelect = `*, owner:profiles!books_owner_id_fkey(name, received_reviews:reviews!reviewee_id(rating))`;
+      const itemSelect = `*, owner:profiles!items_owner_id_fkey(name, received_reviews:reviews!reviewee_id(rating))`;
+
+      let newBooks: any[] = [];
+      let newItems: any[] = [];
+
+      if (hasMoreBooks) {
+        const { data } = await supabase.from("books")
+          .select(bookSelect)
+          .order("created_at", { ascending: false })
+          .range(booksOffset, booksOffset + PAGE_SIZE - 1)
+          .eq('is_available', true);
+        newBooks = data || [];
+      }
+
+      if (hasMoreItems) {
+        const { data } = await supabase.from("items")
+          .select(itemSelect)
+          .order("created_at", { ascending: false })
+          .range(itemsOffset, itemsOffset + PAGE_SIZE - 1)
+          .eq('is_available', true);
+        newItems = data || [];
+      }
+
       if (newBooks.length > 0) {
         setBooks(prev => [...prev, ...newBooks]);
         setBooksOffset(prev => prev + newBooks.length);
       }
       if (newBooks.length < PAGE_SIZE) setHasMoreBooks(false);
+
       if (newItems.length > 0) {
         setItems(prev => [...prev, ...newItems]);
         setItemsOffset(prev => prev + newItems.length);
@@ -132,12 +163,14 @@ const Home = () => {
     const bookListings: ListingItem[] = books.map(book => ({
       id: book.id, name: book.title, type: book.type, condition: book.condition,
       description: book.description, image_url: book.image_url, created_at: book.created_at,
-      itemType: 'book', grade: book.grade, category: book.category, is_available: book.is_available, status: book.status
+      itemType: 'book', grade: book.grade, category: book.category, is_available: book.is_available, status: book.status,
+      owner: (book as any).owner
     }));
     const itemListings: ListingItem[] = items.map(item => ({
       id: item.id, name: item.name, type: item.type, condition: item.condition,
       description: item.description, image_url: item.image_url, created_at: item.created_at,
-      itemType: 'item', category: item.category, is_available: item.is_available, status: item.status
+      itemType: 'item', category: item.category, is_available: item.is_available, status: item.status,
+      owner: (item as any).owner
     }));
     return [...bookListings, ...itemListings].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -370,6 +403,14 @@ const Home = () => {
                             {item.itemType === 'book' ? <><BookOpen className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</> : <><Package className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>}
                           </Badge>
                           {/* <StatusBadge status={item.status} /> */}
+                        </div>
+                        {/*  OWNER REPUTATION SECTION */}
+                        <div className="pt-2 border-t flex items-center justify-between">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Posted by</span>
+                            <span className="text-sm font-medium truncate max-w-[100px]">{item.owner?.name || 'User'}</span>
+                          </div>
+                          <UserReputation reviews={item.owner?.received_reviews} />
                         </div>
                       </div>
                     </CardContent>

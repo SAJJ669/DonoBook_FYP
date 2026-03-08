@@ -19,7 +19,7 @@ const UploadItem = () => {
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadType, setUploadType] = useState<UploadType>("book");
-  
+
   // Book-specific form data
   const [bookFormData, setBookFormData] = useState({
     title: "",
@@ -29,7 +29,7 @@ const UploadItem = () => {
     condition: "",
     description: "",
   });
-  
+
   // Item-specific form data
   const [itemFormData, setItemFormData] = useState({
     name: "",
@@ -58,7 +58,7 @@ const UploadItem = () => {
 
   const uploadImage = async (userId: string, bucket: string) => {
     if (!imageFile) return null;
-    
+
     const fileExt = imageFile.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
     const { error: uploadError } = await supabase.storage
@@ -84,7 +84,7 @@ const UploadItem = () => {
 
       if (uploadType === "book") {
         const imageUrl = await uploadImage(user.id, 'book-images');
-        
+
         const { error } = await supabase.from("books").insert([
           {
             title: bookFormData.title,
@@ -99,14 +99,14 @@ const UploadItem = () => {
         ]);
 
         if (error) throw error;
-        
+
         toast({
           title: "Success!",
           description: "Book uploaded successfully",
         });
       } else {
         const imageUrl = await uploadImage(user.id, 'item-images');
-        
+
         const { error } = await supabase.from("items").insert([
           {
             name: itemFormData.name,
@@ -120,13 +120,13 @@ const UploadItem = () => {
         ]);
 
         if (error) throw error;
-        
+
         toast({
           title: "Success!",
           description: "Item uploaded successfully",
         });
       }
-      
+
       navigate("/dashboard");
     } catch (error: any) {
       toast({
@@ -303,23 +303,26 @@ const UploadItem = () => {
               ) : (
                 <>
                   {/* Item Form */}
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Item Name *</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      value={itemFormData.name}
-                      onChange={(e) => setItemFormData({ ...itemFormData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Item Category *</Label>
                       <Select
                         value={itemFormData.category}
-                        onValueChange={(value) => setItemFormData({ ...itemFormData, category: value })}
+                        onValueChange={(value) => {
+                          const categoryLabels: Record<string, string> = {
+                            bag: "Bag",
+                            water_bottle: "Water Bottle",
+                            pencil_box: "Pencil Box",
+                            lunchbox: "Lunchbox",
+                            stationery: "Stationery",
+                          };
+
+                          setItemFormData({
+                            ...itemFormData,
+                            category: value,
+                            name: value === "other" ? "" : categoryLabels[value],
+                          });
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
@@ -334,22 +337,34 @@ const UploadItem = () => {
                         </SelectContent>
                       </Select>
                     </div>
-
                     <div className="space-y-2">
-                      <Label>Transaction Type *</Label>
-                      <Select
-                        value={itemFormData.type}
-                        onValueChange={(value) => setItemFormData({ ...itemFormData, type: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="donate">Donate</SelectItem>
-                          <SelectItem value="exchange">Exchange</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="name">Item Name *</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        value={itemFormData.name}
+                        onChange={(e) => setItemFormData({ ...itemFormData, name: e.target.value })}
+                        disabled={itemFormData.category !== "other"}
+                        required
+                      />
                     </div>
+
+
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Transaction Type *</Label>
+                    <Select
+                      value={itemFormData.type}
+                      onValueChange={(value) => setItemFormData({ ...itemFormData, type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="donate">Donate</SelectItem>
+                        <SelectItem value="exchange">Exchange</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">

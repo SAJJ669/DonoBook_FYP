@@ -56,7 +56,7 @@ const Messages = () => {
     setTimeout(() => {
       scrollToBottom();
     }, 100);
-  }, []);
+  }, [messages, currentUserId]);
 
   // Enable notifications for this chat
   useMessageNotifications({

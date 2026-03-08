@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import EditItemDialog from "@/components/EditItemDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { StatusBadge } from "@/components/StatusBadge";
+import { ReviewModal } from "@/components/ReviewModal";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -31,6 +32,12 @@ const Dashboard = () => {
   // To track items/books sent by owners
   const [givenAway, setGivenAway] = useState<any[]>([]);
   const [receivedItems, setReceivedItems] = useState<any[]>([]);
+
+  // State to control visibility
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  // State to keep track of WHICH book/item is being reviewed
+  const [selectedItemForReview, setSelectedItemForReview] = useState<any>(null);
 
   useEffect(() => {
     checkAuth();
@@ -78,8 +85,8 @@ const Dashboard = () => {
         supabase.from("items").select(`*, receiver:profiles!items_receiver_id_fkey(name)`).eq("owner_id", user.id).eq("status", "claimed"),
 
         // 3. Received (Owned by others, but receiver_id is me)
-        supabase.from("books").select(`*, owner:profiles!books_owner_id_fkey(name)`).eq("receiver_id", user.id),
-        supabase.from("items").select(`*, owner:profiles!items_owner_id_fkey(name)`).eq("receiver_id", user.id)
+        supabase.from("books").select(`*, owner:profiles!books_owner_id_fkey(name), reviews(id)`).eq("receiver_id", user.id),
+        supabase.from("items").select(`*, owner:profiles!items_owner_id_fkey(name), reviews(id)`).eq("receiver_id", user.id)
       ]);
 
       if (booksRes.error) throw booksRes.error;
@@ -133,6 +140,27 @@ const Dashboard = () => {
     setEditItem(item);
     setEditType(type);
     setEditOpen(true);
+  };
+
+  const handleConfirmHandover = async (item: any, table: 'books' | 'items') => {
+    const { error } = await supabase
+      .from(table)
+      .update({ handover_confirmed: true })
+      .eq('id', item.id);
+
+    if (error) throw error;
+
+    toast({
+      title: "Handover Confirmed!",
+      description: "Thanks for confirming. Please leave a review for the owner!"
+    });
+
+    // THIS TRIGGERS THE MODAL
+    setSelectedItemForReview(item);
+    setIsReviewModalOpen(true);
+
+    // Refresh the list so the "Confirm" button turns into "Leave Review"
+    await fetchUserListings();
   };
 
   const isUploadDisabled = userProfile?.user_type === "bookstore" && !userProfile?.verified;
@@ -255,7 +283,7 @@ const Dashboard = () => {
                   {items.map((item) => (
                     <Card key={item.id} className="shadow-card hover:shadow-soft transition-smooth">
                       <CardHeader>
-                        <img src={item.image_url || "/placeholder.svg"} alt={item.name} className={`w-full h-48 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""}`} />
+                        <img src={item.image_url || "/placeholder.svg"} alt={item.name} className={`w-full h-48 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{item.name}</CardTitle>
                         <CardDescription>
                           {item.category} • {item.condition} • {item.type} • <StatusBadge status={item.status} />
@@ -306,24 +334,64 @@ const Dashboard = () => {
                     <Package className="h-5 w-5 text-green-600" /> Received
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {receivedItems.map((item) => (
-                      <Card key={item.id} className="border-green-200 bg-green-50/30">
-                        <CardHeader className="p-4">
-                          <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
-                          <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
-                          <Badge variant="outline" className="bg-green-100 text-green-700">Received</Badge>
-                        </CardHeader>
-                        <p className="text-xs text-muted-foreground mt-1 font-medium">
-                          📩 Received from: <span className="text-foreground">{item.owner?.name || "Unknown"}</span>
-                        </p>
-                      </Card>
-                    ))}
+                    {receivedItems.map((item) => {
+                      // Check if a review already exists for this specific item
+                      const alreadyReviewed = item.reviews && item.reviews.length > 0;
+                      return (
+                        <Card key={item.id} className="border-green-200 bg-green-50/30">
+                          <CardHeader className="p-4">
+                            <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
+                            <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
+                            <Badge variant="outline" className="bg-green-100 text-green-700">Received</Badge>
+                            <div className="mt-4 space-y-2">
+                              {!item.handover_confirmed ? (
+                                <Button
+                                  size="sm"
+                                  className="w-full bg-green-600 hover:bg-green-700"
+                                  onClick={() => handleConfirmHandover(item, item.title ? 'books' : 'items')}
+                                >
+                                  Confirm I Received This
+                                </Button>
+                              ) : !alreadyReviewed ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full border-primary text-primary hover:bg-primary/10"
+                                  onClick={() => {
+                                    setSelectedItemForReview(item); // Ensure this is set
+                                    setIsReviewModalOpen(true);   // Then open
+                                  }}
+                                >
+                                  Leave a Review
+                                </Button>
+                              ) : (
+                                <div className="text-center py-2 px-3 bg-green-100 rounded-md text-green-700 text-xs font-medium flex items-center justify-center gap-1">
+                                  Review Submitted
+                                </div>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <p className="text-xs text-muted-foreground mt-1 font-medium">
+                            📩 Received from: <span className="text-foreground">{item.owner?.name || "Unknown"}</span>
+                          </p>
+                        </Card>
+                      )
+                    })}
                   </div>
                 </section>
               </div>
             </TabsContent>
-
           </Tabs>
+        )}
+        {/* THE MODAL COMPONENT */}
+        {selectedItemForReview && (
+          <ReviewModal
+            open={isReviewModalOpen}
+            onOpenChange={setIsReviewModalOpen}
+            targetItem={selectedItemForReview}
+            currentUserId={userProfile?.id}
+            onSuccess={fetchUserListings} // Refresh UI after review is saved
+          />
         )}
       </div>
 
