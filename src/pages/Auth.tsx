@@ -19,9 +19,9 @@ const Auth = () => {
     email: "",
     password: "",
     name: "",
-    userType: "user" as "user" | "bookstore",
-    shopName: "",
-    shopAddress: "",
+    userType: "user" as "user" | "welfare",
+    orgName: "",
+    orgAddress: "",
     contactNumber: "",
     businessId: "",
   });
@@ -34,7 +34,20 @@ const Auth = () => {
         navigate("/dashboard");
       }
     });
+
+    // Listen for login/signup events
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          navigate("/dashboard");
+        }
+      }
+    );
   }, [navigate]);
+
+  useEffect(() => {
+    setIsSignup(searchParams.get("mode") === "signup");
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,24 +70,32 @@ const Auth = () => {
 
         if (data.user) {
           // Create profile
+          const profileName = formData.userType === "welfare" ? formData.orgName : formData.name;
+
           const { error: profileError } = await supabase
             .from("profiles")
             .insert([
               {
                 id: data.user.id,
-                name: formData.name,
+                name: profileName,
                 user_type: formData.userType,
-                shop_name: formData.userType === "bookstore" ? formData.shopName : null,
-                shop_address: formData.userType === "bookstore" ? formData.shopAddress : null,
-                contact_number: formData.userType === "bookstore" ? formData.contactNumber : null,
-                business_id: formData.userType === "bookstore" ? formData.businessId : null,
+                organization_name: formData.userType === "welfare" ? formData.orgName : null,
+                organization_address: formData.userType === "welfare" ? formData.orgAddress : null,
+                contact_number: formData.userType === "welfare" ? formData.contactNumber : null,
+                business_id: formData.userType === "welfare" ? formData.businessId : null,
               },
             ]);
 
-          if (profileError) throw profileError;
+          if (profileError) {
+            // If the error is a "duplicate key" error (code 23505 in Postgres)
+            if (profileError.code === '23505') {
+              throw new Error("This Organization Registration ID is already registered. Please contact your administrator.");
+            }
+            throw profileError;
+          }
 
-          // If bookstore, create verification request
-          if (formData.userType === "bookstore") {
+          // If welfare, create verification request
+          if (formData.userType === "welfare") {
             let proofImageUrl = null;
 
             // Upload proof image if provided
@@ -96,12 +117,12 @@ const Auth = () => {
             }
 
             const { error: verificationError } = await supabase
-              .from("bookstore_verifications")
+              .from("welfare_verifications")
               .insert([
                 {
                   user_id: data.user.id,
-                  shop_name: formData.shopName,
-                  shop_address: formData.shopAddress,
+                  organization_name: formData.orgName,
+                  organization_address: formData.orgAddress,
                   contact_number: formData.contactNumber,
                   business_id: formData.businessId,
                   proof_image_url: proofImageUrl,
@@ -113,8 +134,8 @@ const Auth = () => {
 
           toast({
             title: "Success!",
-            description: formData.userType === "bookstore" 
-              ? "Account created! Your verification request is pending approval." 
+            description: formData.userType === "welfare"
+              ? "Account created! Your verification request is pending approval."
               : "Account created successfully!",
           });
           navigate("/dashboard");
@@ -166,7 +187,7 @@ const Auth = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignup && (
                 <>
-                  <div className="space-y-2">
+                  {formData.userType === "user" && (<div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
                     <Input
                       id="name"
@@ -177,40 +198,41 @@ const Auth = () => {
                       required
                     />
                   </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="userType">Account Type</Label>
                     <select
                       id="userType"
                       value={formData.userType}
-                      onChange={(e) => setFormData({ ...formData, userType: e.target.value as "user" | "bookstore" })}
+                      onChange={(e) => setFormData({ ...formData, userType: e.target.value as "user" | "welfare" })}
                       className="w-full px-3 py-2 border border-input rounded-md bg-background"
                       required
                     >
                       <option value="user">Student/User</option>
-                      <option value="bookstore">Bookstore</option>
+                      <option value="welfare">Welfare Organization (NGO)</option>
                     </select>
                   </div>
-                  {formData.userType === "bookstore" && (
+                  {formData.userType === "welfare" && (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="shopName">Shop Name</Label>
+                        <Label htmlFor="orgName">Organization Name</Label>
                         <Input
-                          id="shopName"
+                          id="orgName"
                           type="text"
-                          placeholder="Book Haven"
-                          value={formData.shopName}
-                          onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+                          placeholder="Charity Foundation"
+                          value={formData.orgName}
+                          onChange={(e) => setFormData({ ...formData, orgName: e.target.value })}
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="shopAddress">Shop Address</Label>
+                        <Label htmlFor="orgAddress">NGO Address</Label>
                         <Input
-                          id="shopAddress"
+                          id="orgAddress"
                           type="text"
                           placeholder="123 Main St, City"
-                          value={formData.shopAddress}
-                          onChange={(e) => setFormData({ ...formData, shopAddress: e.target.value })}
+                          value={formData.orgAddress}
+                          onChange={(e) => setFormData({ ...formData, orgAddress: e.target.value })}
                           required
                         />
                       </div>
@@ -237,7 +259,7 @@ const Auth = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="proofImage">Business Proof Document (Optional)</Label>
+                        <Label htmlFor="proofImage">NGO Proof Document</Label>
                         <Input
                           id="proofImage"
                           type="file"
@@ -257,7 +279,7 @@ const Auth = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={formData.userType === "welfare" ? "donation@example.com" : "you@example.com"}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required

@@ -53,9 +53,9 @@ const Dashboard = () => {
         .from("profiles").select("*").eq("id", user.id).single();
       if (error) throw error;
       setUserProfile(profile);
-      if (profile.user_type === "bookstore") {
+      if (profile.user_type === "welfare") {
         const { data: verification } = await supabase
-          .from("bookstore_verifications").select("status").eq("user_id", user.id).single();
+          .from("welfare_verifications").select("status").eq("user_id", user.id).single();
         setVerificationStatus(verification?.status || null);
       }
     } catch (error) {
@@ -163,13 +163,13 @@ const Dashboard = () => {
     await fetchUserListings();
   };
 
-  const isUploadDisabled = userProfile?.user_type === "bookstore" && !userProfile?.verified;
+  const isUploadDisabled = userProfile?.user_type === "welfare" && !userProfile?.verified;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        {userProfile?.user_type === "bookstore" && !userProfile?.verified && (
+        {userProfile?.user_type === "welfare" && !userProfile?.verified && (
           <Card className="shadow-card mb-8 border-amber-500/50 bg-amber-50/50">
             <CardContent className="py-6">
               <div className="flex items-start gap-4">
@@ -185,9 +185,9 @@ const Dashboard = () => {
                     {!verificationStatus && "Complete Your Verification"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    {verificationStatus === "pending" && "Your bookstore verification is under review."}
+                    {verificationStatus === "pending" && "Your welfare verification is under review."}
                     {verificationStatus === "rejected" && "Your verification request was rejected. Please contact support."}
-                    {!verificationStatus && "Please submit verification documents to start selling books."}
+                    {!verificationStatus && "Please submit verification documents to start uploading books."}
                   </p>
                 </div>
               </div>
@@ -230,7 +230,7 @@ const Dashboard = () => {
                 <Card className="shadow-card">
                   <CardContent className="py-12 text-center">
                     <p className="text-muted-foreground mb-4">No books uploaded yet.</p>
-                    <Button onClick={() => navigate("/upload")} className="bg-primary hover:bg-primary-hover">
+                    <Button disabled={isUploadDisabled} onClick={() => navigate("/upload")} className="bg-primary hover:bg-primary-hover">
                       Upload Your First Book
                     </Button>
                   </CardContent>
@@ -319,9 +319,18 @@ const Dashboard = () => {
                         <CardHeader className="p-4">
                           <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
                           <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
-                          <StatusBadge status="claimed" />
-                          <p className="text-xs text-muted-foreground mt-1 font-medium">
-                            🎁 Given to: <span className="text-foreground">{item.receiver?.name || "Unknown"}</span>
+                          {/* Conditional Status Display */}
+                          <div className="flex items-center gap-2">
+                            {item.handover_confirmed ? (
+                              <StatusBadge status="claimed" />
+                            ) : (
+                              <span className="text-[10px] font-bold uppercase px-2 py-1 bg-amber-100 text-amber-700 rounded-full border border-amber-200">
+                                Awaiting Confirmation
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2 font-medium">
+                            🎁 {item.handover_confirmed ? "Given to:" : "Sent to:"} <span className="text-foreground">{item.receiver?.name || "Unknown"}</span>
                           </p>
                         </CardHeader>
                       </Card>
@@ -342,7 +351,16 @@ const Dashboard = () => {
                           <CardHeader className="p-4">
                             <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
                             <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
-                            <Badge variant="outline" className="bg-green-100 text-green-700">Received</Badge>
+                            <div className="flex items-center gap-2">
+
+                              {item.handover_confirmed ? (
+                                <StatusBadge status="claimed" />
+                              ) : (
+                                <span className="text-[10px] font-bold uppercase px-2 py-1 bg-amber-100 text-amber-700 rounded-full border border-amber-200">
+                                  Awaiting Confirmation
+                                </span>
+                              )}
+                            </div>
                             <div className="mt-4 space-y-2">
                               {!item.handover_confirmed ? (
                                 <Button
@@ -370,10 +388,10 @@ const Dashboard = () => {
                                 </div>
                               )}
                             </div>
+                            <p className="text-xs text-muted-foreground mt-1 font-medium">
+                              📩 {item.handover_confirmed ? "Received from: " : "Delivering by: "} <span className="text-foreground">{item.owner?.name || "Unknown"}</span>
+                            </p>
                           </CardHeader>
-                          <p className="text-xs text-muted-foreground mt-1 font-medium">
-                            📩 Received from: <span className="text-foreground">{item.owner?.name || "Unknown"}</span>
-                          </p>
                         </Card>
                       )
                     })}

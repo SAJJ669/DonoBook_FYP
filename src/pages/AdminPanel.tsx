@@ -11,8 +11,8 @@ import { CheckCircle, XCircle, AlertCircle } from "lucide-react";
 type VerificationRequest = {
   id: string;
   user_id: string;
-  shop_name: string;
-  shop_address: string;
+  organization_name: string;
+  organization_address: string;
   contact_number: string;
   business_id: string;
   proof_image_url: string | null;
@@ -78,7 +78,7 @@ const AdminPanel = () => {
   const fetchVerificationRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from("bookstore_verifications")
+        .from("welfare_verifications")
         .select(`
           *,
           profiles:user_id (
@@ -108,7 +108,7 @@ const AdminPanel = () => {
 
       // Update verification status
       const { error: verificationError } = await supabase
-        .from("bookstore_verifications")
+        .from("welfare_verifications")
         .update({
           status: approve ? "approved" : "rejected",
           reviewed_at: new Date().toISOString(),
@@ -152,7 +152,7 @@ const AdminPanel = () => {
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-4xl font-heading font-bold text-foreground mb-8">
-          Admin Panel - Bookstore Verification
+          Admin Panel - Welfare Verification
         </h1>
 
         {loading ? (
@@ -173,7 +173,7 @@ const AdminPanel = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="font-heading flex items-center gap-2">
-                        {request.shop_name}
+                        {request.organization_name}
                         <Badge
                           variant={
                             request.status === "approved"
@@ -197,7 +197,7 @@ const AdminPanel = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium text-foreground">Address</p>
-                      <p className="text-sm text-muted-foreground">{request.shop_address}</p>
+                      <p className="text-sm text-muted-foreground">{request.organization_address}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">Contact Number</p>
