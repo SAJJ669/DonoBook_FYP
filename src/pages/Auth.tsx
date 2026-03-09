@@ -99,6 +99,10 @@ const Auth = () => {
             let proofImageUrl = null;
 
             // Upload proof image if provided
+            if (proofImage.size > 5 * 1024 * 1024) {
+              throw new Error("File must be smaller than 5MB");
+            }
+
             if (proofImage) {
               const fileExt = proofImage.name.split('.').pop();
               const fileName = `${data.user.id}/${Date.now()}.${fileExt}`;
@@ -265,6 +269,7 @@ const Auth = () => {
                           type="file"
                           accept="image/*,.pdf"
                           onChange={(e) => setProofImage(e.target.files?.[0] || null)}
+                          required
                         />
                         <p className="text-xs text-muted-foreground">
                           Upload business license or registration certificate

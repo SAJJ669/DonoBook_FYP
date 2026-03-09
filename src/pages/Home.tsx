@@ -410,7 +410,10 @@ const Home = () => {
                             <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Posted by</span>
                             <span className="text-sm font-medium truncate max-w-[100px]">{item.owner?.name || 'User'}</span>
                           </div>
-                          <UserReputation reviews={item.owner?.received_reviews} />
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">User Reputation</span>
+                            <UserReputation reviews={item.owner?.received_reviews} />
+                          </div>
                         </div>
                       </div>
                     </CardContent>

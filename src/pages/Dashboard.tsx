@@ -163,33 +163,116 @@ const Dashboard = () => {
     await fetchUserListings();
   };
 
-  const isUploadDisabled = userProfile?.user_type === "welfare" && !userProfile?.verified;
+  // To resubmit verification request after rejection
+  const handleResubmit = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (e.g., max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload a file smaller than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
+
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/resubmit_${Date.now()}.${fileExt}`;
+
+      // 1. Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('verification-proofs')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // 2. Get the new Public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('verification-proofs')
+        .getPublicUrl(filePath);
+
+      // 3. Update the existing verification record
+      // We reset status to 'pending' so admin sees it again
+      const { error: updateError } = await supabase
+        .from("welfare_verifications")
+        .update({
+          proof_image_url: publicUrl,
+          status: 'pending',
+          created_at: new Date().toISOString() // Optional: move to top of admin queue
+        })
+        .eq("user_id", user.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Documents Resubmitted",
+        description: "Your verification request has been sent back for review.",
+      });
+
+      // Refresh the profile and status states
+      await fetchUserProfile();
+
+    } catch (error: any) {
+      toast({
+        title: "Resubmit failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isUploadDisabled = userProfile?.user_type === "welfare" && verificationStatus === "pending" | "rejected";
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        {userProfile?.user_type === "welfare" && !userProfile?.verified && (
+        {userProfile?.user_type === "welfare" && verificationStatus !== "approved" && (
           <Card className="shadow-card mb-8 border-amber-500/50 bg-amber-50/50">
             <CardContent className="py-6">
               <div className="flex items-start gap-4">
                 <div className="text-amber-600">
                   {verificationStatus === "pending" && "⏳"}
                   {verificationStatus === "rejected" && "❌"}
-                  {!verificationStatus && "📋"}
+                  {verificationStatus === null && "📋"}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-heading font-semibold text-foreground mb-1">
                     {verificationStatus === "pending" && "Verification Pending"}
                     {verificationStatus === "rejected" && "Verification Rejected"}
-                    {!verificationStatus && "Complete Your Verification"}
+                    {verificationStatus === null && "Complete Your Verification"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {verificationStatus === "pending" && "Your welfare verification is under review."}
                     {verificationStatus === "rejected" && "Your verification request was rejected. Please contact support."}
-                    {!verificationStatus && "Please submit verification documents to start uploading books."}
+                    {verificationStatus === null && "Please submit verification documents to start uploading books."}
                   </p>
                 </div>
+                {/* Resubmit Button Logic */}
+                {(verificationStatus === "rejected") && (
+                  <div className="flex flex-col items-center gap-2">
+                    <Button className="relative bg-primary hover:bg-primary-hover overflow-hidden">
+                      {loading ? "Uploading..." : "Upload Document"}
+                      <input
+                        type="file"
+                        className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                        accept="image/*,.pdf"
+                        onChange={handleResubmit}
+                        disabled={loading}
+                      />
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground italic">PDF or Image (Max 5MB)</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

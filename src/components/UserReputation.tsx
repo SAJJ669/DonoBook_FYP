@@ -2,7 +2,7 @@ import { Star } from "lucide-react";
 
 export const UserReputation = ({ reviews }: { reviews: any[] }) => {
   if (!reviews || reviews.length === 0) {
-    return <span className="text-xs text-muted-foreground italic">New Member (No ratings)</span>;
+    return <span className="text-xs italic">New Member (No ratings)</span>;
   }
 
   const totalRating = reviews.reduce((acc, curr) => acc + curr.rating, 0);
