@@ -5,12 +5,13 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, BookOpen, Package, RefreshCw, Gift, Badge } from "lucide-react";
+import { Plus, Edit, Trash2, BookOpen, Package, RefreshCw, Gift, Badge, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EditItemDialog from "@/components/EditItemDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReviewModal } from "@/components/ReviewModal";
+import ComplaintsTab from "@/components/ComplaintsTab";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -49,17 +50,42 @@ const Dashboard = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: profile, error } = await supabase
-        .from("profiles").select("*").eq("id", user.id).single();
+
+      // Fetch Profile, Role, and Verification in ONE go
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+        *,
+        user_roles (role),
+        welfare_verifications (status)
+      `)
+        .eq("id", user.id)
+        .single();
+
       if (error) throw error;
-      setUserProfile(profile);
-      if (profile.user_type === "welfare") {
-        const { data: verification } = await supabase
-          .from("welfare_verifications").select("status").eq("user_id", user.id).single();
-        setVerificationStatus(verification?.status || null);
+
+      // Flatten the data for easier use in your state
+      const profileWithRole = {
+        ...data,
+        // Check if it's an array or an object
+        role: Array.isArray(data.user_roles)
+          ? data.user_roles[0]?.role
+          : data.user_roles?.role || 'user',
+      };
+
+      setUserProfile(profileWithRole);
+
+      // If they are welfare, the status is already here!
+      if (data.user_type === "welfare") {
+        // Access directly if it's an object, or use [0] if it's an array
+        const vData = data.welfare_verifications;
+        const status = Array.isArray(vData) ? vData[0]?.status : vData?.status;
+
+        setVerificationStatus(status || null);
       }
-    } catch (error) {
-      console.error("Error fetching profile:", error);
+
+    } catch (error: any) {
+      console.error("Error loading profile:", error.message);
     }
   };
 
@@ -306,6 +332,9 @@ const Dashboard = () => {
               <TabsTrigger value="history" className="gap-2">
                 <RefreshCw className="h-4 w-4" /> History ({givenAway.length + receivedItems.length})
               </TabsTrigger>
+              {userProfile?.role !== "admin" && <TabsTrigger value="support" className="gap-2">
+                <MessageSquare className="h-4 w-4" /> Support
+              </TabsTrigger>}
             </TabsList>
 
             <TabsContent value="books">
@@ -369,8 +398,11 @@ const Dashboard = () => {
                         <img src={item.image_url || "/placeholder.svg"} alt={item.name} className={`w-full h-48 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{item.name}</CardTitle>
                         <CardDescription>
-                          {item.category} • {item.condition} • {item.type} • <StatusBadge status={item.status} />
+                          {item.category} • {item.condition} • {item.type}
                         </CardDescription>
+                        <div className="mt-2">
+                          <StatusBadge status={item.status} />
+                        </div>
                       </CardHeader>
                       <CardContent>
                         <div className="flex gap-2">
@@ -482,6 +514,12 @@ const Dashboard = () => {
                 </section>
               </div>
             </TabsContent>
+            {/* ONLY RENDER SUPPORT CONTENT IF USER IS NOT AN ADMIN */}
+            {userProfile?.role !== "admin" && (
+              <TabsContent value="support">
+                <ComplaintsTab />
+              </TabsContent>
+            )}
           </Tabs>
         )}
         {/* THE MODAL COMPONENT */}
