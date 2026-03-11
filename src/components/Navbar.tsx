@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { BookOpen, User, LogOut, MessageSquare, Bot, Search, Home, Menu, X, Sun, Moon } from "lucide-react";
+import { BookOpen, User, LogOut, MessageSquare, Bot, Search, Home, Menu, X, Sun, Moon, LayoutDashboard, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -9,8 +9,17 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
 import { Switch } from "@/components/ui/switch"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const Navbar = () => {
+const Navbar = ({ userProfile }: { userProfile: any }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -145,7 +154,7 @@ const Navbar = () => {
                   Home
                 </Button>
                 <Button variant="ghost" onClick={() => navigate("/dashboard")} className="gap-2">
-                  <User className="h-4 w-4" />
+                  <LayoutDashboard className="h-4 w-4" />
                   Dashboard
                 </Button>
                 <Button variant="ghost" onClick={() => navigate("/conversations")} className="gap-2 relative">
@@ -171,6 +180,7 @@ const Navbar = () => {
                   <LogOut className="h-4 w-4" />
                   Logout
                 </Button>
+                
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={isDark}
@@ -216,7 +226,7 @@ const Navbar = () => {
           {user ? (
             <>
               <Button variant="ghost" onClick={() => navigate("/dashboard")} className="w-full text-left mb-2">
-                <User className="h-4 w-4 mr-2" />
+                <LayoutDashboard className="h-4 w-4 mr-2" />
                 Dashboard
               </Button>
               <Button variant="ghost" onClick={() => navigate("/conversations")} className="w-full text-left mb-2">

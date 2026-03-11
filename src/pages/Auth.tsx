@@ -21,7 +21,7 @@ const Auth = () => {
     name: "",
     userType: "user" as "user" | "welfare",
     orgName: "",
-    orgAddress: "",
+    address: "",
     contactNumber: "",
     businessId: "",
   });
@@ -80,7 +80,7 @@ const Auth = () => {
                 name: profileName,
                 user_type: formData.userType,
                 organization_name: formData.userType === "welfare" ? formData.orgName : null,
-                organization_address: formData.userType === "welfare" ? formData.orgAddress : null,
+                address: formData.address,
                 contact_number: formData.userType === "welfare" ? formData.contactNumber : null,
                 business_id: formData.userType === "welfare" ? formData.businessId : null,
               },
@@ -126,7 +126,7 @@ const Auth = () => {
                 {
                   user_id: data.user.id,
                   organization_name: formData.orgName,
-                  organization_address: formData.orgAddress,
+                  organization_address: formData.address,
                   contact_number: formData.contactNumber,
                   business_id: formData.businessId,
                   proof_image_url: proofImageUrl,
@@ -169,6 +169,12 @@ const Auth = () => {
     }
   };
 
+  const KARACHI_AREAS = [
+    "Gulshan-e-Iqbal", "DHA / Clifton", "North Nazimabad", "Gulistan-e-Jauhar",
+    "Saddar", "Malir", "Korangi", "Bahria Town", "PECHS", "Federal B Area",
+    "Nazimabad", "Liyari", "Surjani Town", "Orangi", "Baldia", "Other"
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-light via-background to-secondary/20">
       <Navbar />
@@ -191,18 +197,6 @@ const Auth = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignup && (
                 <>
-                  {formData.userType === "user" && (<div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  )}
                   <div className="space-y-2">
                     <Label htmlFor="userType">Account Type</Label>
                     <select
@@ -216,6 +210,57 @@ const Auth = () => {
                       <option value="welfare">Welfare Organization (NGO)</option>
                     </select>
                   </div>
+                  {formData.userType === "user" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input
+                          id="name"
+                          type="text"
+                          placeholder="John Doe"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="area">Select Area in Karachi</Label>
+                        <select
+                          id="area"
+                          value={formData.address === "" ? "" : KARACHI_AREAS.includes(formData.address) ? formData.address : "Other"}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // If selecting a preset area, update address immediately
+                            // If "Other", we leave it for the manual input to fill
+                            setFormData({ ...formData, address: val === "Other" ? "" : val });
+                          }}
+                          className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                          required
+                        >
+                          <option value="" disabled>Choose your location</option>
+                          {KARACHI_AREAS.map((area) => (
+                            <option key={area} value={area}>{area}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* MANUAL INPUT - Only shows if 'Other' is selected or a custom area is being typed */}
+                      {(formData.address === "" || !KARACHI_AREAS.includes(formData.address)) && (
+                        <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                          <Label htmlFor="manualArea">Please specify your area</Label>
+                          <Input
+                            id="manualArea"
+                            type="text"
+                            placeholder="Enter your area name"
+                            value={formData.address}
+                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                            required
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
                   {formData.userType === "welfare" && (
                     <>
                       <div className="space-y-2">
@@ -230,13 +275,13 @@ const Auth = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="orgAddress">NGO Address</Label>
+                        <Label htmlFor="address">NGO Address</Label>
                         <Input
-                          id="orgAddress"
+                          id="address"
                           type="text"
                           placeholder="123 Main St, City"
-                          value={formData.orgAddress}
-                          onChange={(e) => setFormData({ ...formData, orgAddress: e.target.value })}
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                           required
                         />
                       </div>

@@ -5,13 +5,14 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Edit, Trash2, BookOpen, Package, RefreshCw, Gift, Badge, MessageSquare } from "lucide-react";
+import { Plus, Edit, Trash2, BookOpen, Package, RefreshCw, Gift, Badge, MessageSquare, Settings, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EditItemDialog from "@/components/EditItemDialog";
 import type { Database } from "@/integrations/supabase/types";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ReviewModal } from "@/components/ReviewModal";
 import ComplaintsTab from "@/components/ComplaintsTab";
+import EditProfile from "@/components/EditProfile";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -269,18 +270,15 @@ const Dashboard = () => {
                 <div className="text-amber-600">
                   {verificationStatus === "pending" && "⏳"}
                   {verificationStatus === "rejected" && "❌"}
-                  {verificationStatus === null && "📋"}
                 </div>
                 <div className="flex-1">
                   <h3 className="font-heading font-semibold text-foreground mb-1">
                     {verificationStatus === "pending" && "Verification Pending"}
                     {verificationStatus === "rejected" && "Verification Rejected"}
-                    {verificationStatus === null && "Complete Your Verification"}
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {verificationStatus === "pending" && "Your welfare verification is under review."}
                     {verificationStatus === "rejected" && "Your verification request was rejected. Please contact support."}
-                    {verificationStatus === null && "Please submit verification documents to start uploading books."}
                   </p>
                 </div>
                 {/* Resubmit Button Logic */}
@@ -332,9 +330,13 @@ const Dashboard = () => {
               <TabsTrigger value="history" className="gap-2">
                 <RefreshCw className="h-4 w-4" /> History ({givenAway.length + receivedItems.length})
               </TabsTrigger>
-              {userProfile?.role !== "admin" && <TabsTrigger value="support" className="gap-2">
-                <MessageSquare className="h-4 w-4" /> Support
-              </TabsTrigger>}
+              {userProfile?.role !== "admin" &&
+                <TabsTrigger value="support" className="gap-2">
+                  <MessageSquare className="h-4 w-4" /> Support
+                </TabsTrigger>}
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" /> Settings
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="books">
@@ -520,6 +522,27 @@ const Dashboard = () => {
                 <ComplaintsTab />
               </TabsContent>
             )}
+            <TabsContent value="settings">
+              <div className="max-w-4xl mx-auto">
+                <EditProfile
+                  profile={userProfile}
+                  onSave={fetchUserProfile}
+                />
+
+                <Card className="mt-6 border-slate-200 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <User className="h-4 w-4" /> Account Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-xs text-muted-foreground space-y-1">
+                    <p>Member since: {new Date(userProfile?.created_at).toLocaleDateString()}</p>
+                    <p>Account Type: <span className="capitalize font-semibold text-primary">{userProfile?.user_type}</span></p>
+                    <p>User ID: <span className="font-mono">{userProfile?.id}</span></p>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
           </Tabs>
         )}
         {/* THE MODAL COMPONENT */}
