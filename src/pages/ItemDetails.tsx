@@ -5,25 +5,27 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MessageSquare, Gift, RefreshCw, Clock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
+import { Rating } from "@/components/ui/rating";
 import { StatusBadge } from "@/components/StatusBadge";
 
-type Book = Database['public']['Tables']['books']['Row'];
+export type Item = Database['public']['Tables']['items']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
-const BookDetails = () => {
+const ItemDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [book, setBook] = useState<Book | null>(null);
+  const [item, setItem] = useState<Item | null>(null);
   const [owner, setOwner] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+
   useEffect(() => {
-    fetchBookDetails();
+    fetchItemDetails();
     getCurrentUser();
   }, [id]);
 
@@ -32,21 +34,21 @@ const BookDetails = () => {
     setCurrentUserId(user?.id || null);
   };
 
-  const fetchBookDetails = async () => {
+  const fetchItemDetails = async () => {
     try {
-      const { data: bookData, error: bookError } = await supabase
-        .from("books")
+      const { data: itemData, error: itemError } = await supabase
+        .from("items")
         .select("*")
         .eq("id", id!)
         .single();
 
-      if (bookError) throw bookError;
-      setBook(bookData);
+      if (itemError) throw itemError;
+      setItem(itemData);
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", bookData.owner_id)
+        .eq("id", itemData.owner_id)
         .single();
 
       if (profileError) throw profileError;
@@ -68,7 +70,7 @@ const BookDetails = () => {
       navigate("/auth");
       return;
     }
-    navigate(`/messages?userId=${book?.owner_id}`);
+    navigate(`/messages?userId=${item?.owner_id}`);
   };
 
   const getTypeIcon = (type: string) => {
@@ -82,22 +84,34 @@ const BookDetails = () => {
     }
   };
 
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      bag: "Bag",
+      water_bottle: "Water Bottle",
+      pencil_box: "Pencil Box",
+      lunchbox: "Lunchbox",
+      stationery: "Stationery",
+      other: "Other",
+    };
+    return labels[category] || category;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8 text-center">
-          <p className="text-muted-foreground">Loading book details...</p>
+          <p className="text-muted-foreground">Loading item details...</p>
         </div>
       </div>
     );
   }
 
-  if (!book) {
+  if (!item) {
     return null;
   }
 
-  const isOwner = currentUserId === book.owner_id;
+  const isOwner = currentUserId === item.owner_id;
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,13 +129,12 @@ const BookDetails = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card className="shadow-card">
             <CardContent className="p-6">
-              {book.image_url ? (
+              {item.image_url ? (
                 <img
-                  src={book.image_url}
-                  alt={book.title}
-                  className={`w-full h-96 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""
+                  src={item.image_url}
+                  alt={item.name}
+                  className={`w-full h-96 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""
                     }`}
-
                 />
               ) : (
                 <img
@@ -137,48 +150,47 @@ const BookDetails = () => {
             <Card className="shadow-card">
               <CardHeader>
                 <div className="flex flex-col items-start">
-                  <StatusBadge status={book.status} />
-                  <CardTitle className="text-3xl font-heading mt-1">{book.title}</CardTitle>
+                  <StatusBadge status={item.status} />
+                  <CardTitle className="text-3xl font-heading">{item.name}</CardTitle>
                 </div>
                 <CardDescription>
                   Posted by {owner?.name}
-                  {book.grade && ` • Grade ${book.grade}`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2 flex-wrap">
                   <Badge variant="outline" className="text-base py-2 px-4">
-                    {getTypeIcon(book.type)}
-                    <span className="ml-2 capitalize">{book.type}</span>
+                    {getTypeIcon(item.type)}
+                    <span className="ml-2 capitalize">{item.type}</span>
                   </Badge>
                   <Badge variant="outline" className="text-base py-2 px-4">
-                    {book.condition === "new" ? "New" : "Used"}
+                    {item.condition === "new" ? "New" : "Used"}
                   </Badge>
                   <Badge variant="outline" className="text-base py-2 px-4">
-                    {book.category === "textbook" ? "Textbook" : "Reading Book"}
+                    <Package className="h-4 w-4 mr-2" />
+                    {getCategoryLabel(item.category)}
                   </Badge>
                 </div>
 
-
-                {book.description && (
+                {item.description && (
                   <div className="pt-4 border-t">
                     <h3 className="font-heading font-semibold mb-2">Description</h3>
-                    <p className="text-muted-foreground">{book.description}</p>
+                    <p className="text-muted-foreground">{item.description}</p>
                   </div>
                 )}
 
                 {!isOwner && (
                   <Button
                     onClick={handleContact}
-                    // DISABLE BUTTON IF NOT AVAILABLE (Might change this logic in future)
-                    disabled={book.status !== "available"}
-                    className={`w-full gap-2 text-lg py-6 ${book.status === "available"
+                    // DISABLE BUTTON IF NOT AVAILABLE
+                    disabled={item.status !== "available"}
+                    className={`w-full gap-2 text-lg py-6 ${item.status === "available"
                         ? "bg-primary hover:bg-primary-hover"
                         : "bg-muted text-muted-foreground"
                       }`}
                   >
                     <MessageSquare className="h-5 w-5" />
-                    {book.status === "available" ? "Contact Owner" : "Currently Unavailable"}
+                    {item.status === "available" ? "Contact Owner" : "Currently Unavailable"}
                   </Button>
                 )}
 
@@ -205,4 +217,4 @@ const BookDetails = () => {
   );
 };
 
-export default BookDetails;
+export default ItemDetails;

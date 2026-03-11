@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, Edit2, Trash2, X, Check } from "lucide-react";
+import { Send, Edit2, Trash2, X, Check, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
@@ -37,6 +37,26 @@ const Messages = () => {
   const [editedText, setEditedText] = useState("");
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const otherUserId = searchParams.get("userId");
+
+  // These are used when user wants to send offer for an item/book
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
+  const [userBooks, setUserBooks] = useState<any[]>([]);
+  const [userItems, setUserItems] = useState<any[]>([]);
+  const [offerTab, setOfferTab] = useState<'books' | 'items'>('books');
+
+  // For loading chat from last conversation
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // To scroll chat at bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  }, [messages, currentUserId]);
 
   // Enable notifications for this chat
   useMessageNotifications({
@@ -314,6 +334,105 @@ const Messages = () => {
     }
   };
 
+  const sendOffer = async (id: string, title: string, type: 'book' | 'item') => {
+    if (!currentUserId || !otherUserId) return;
+
+    const table = type === 'book' ? 'books' : 'items';
+
+    // 1. Update the item status to 'pending' in the DB
+    const { error: statusError } = await supabase
+      .from(table)
+      .update({ status: 'pending', is_available: false })
+      .eq('id', id);
+
+    if (statusError) {
+      toast({ title: "Error", description: "This item is no longer available", variant: "destructive" });
+      return;
+    }
+
+    // 2. Insert the message (your existing code)
+    const offerData = {
+      sender_id: currentUserId,
+      receiver_id: otherUserId,
+      is_transaction_offer: true,
+      text: `I would like to give/exchange my ${type}: "${title}". Do you accept?`,
+      transaction_status: 'pending',
+      [type === 'book' ? 'book_id' : 'item_id']: id
+    };
+
+    await supabase.from("user_messages").insert([offerData]);
+
+    // Refresh inventory so the book disappears from the "Offer" list immediately
+    fetchUserInventory();
+    toast({ title: "Offer Sent!", description: `${title} is now pending.` });
+  };
+
+  // Handle Accept/Decline Logic
+  const handleTransaction = async (message: any, accept: boolean) => {
+    try {
+      const table = message.book_id ? "books" : "items";
+      const targetId = message.book_id || message.item_id;
+
+      // 1. Update Message Status
+      await supabase
+        .from("user_messages")
+        .update({ transaction_status: accept ? "accepted" : "declined" })
+        .eq("id", message.id);
+
+      // 2. Update Item Status
+      const newStatus = accept ? "claimed" : "available";
+      const { error: updateError } = await supabase
+        .from(table)
+        .update({
+          status: newStatus,
+          is_available: accept ? false : true,
+          receiver_id: accept ? message.receiver_id : null // Save who received it!
+        })
+        .eq("id", targetId);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: accept ? "Transaction Accepted" : "Offer Declined",
+        description: accept ? "Item marked as claimed." : "Item is now available for others again.",
+      });
+
+      fetchMessages();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // For Fetching User Uploads when user wants to offer books/items
+  const fetchUserInventory = async () => {
+    if (!currentUserId) return;
+
+    // Fetch available books
+    const { data: books } = await supabase
+      .from("books")
+      .select("id, title")
+      .eq("owner_id", currentUserId)
+      .eq("is_available", true);
+
+    // Fetch available items
+    const { data: items } = await supabase
+      .from("items")
+      .select("id, name")
+      .eq("owner_id", currentUserId)
+      .eq("is_available", true);
+
+    setUserBooks(books || []);
+    setUserItems(items || []);
+  };
+
+  // Update existing useEffect to include this
+  useEffect(() => {
+    if (currentUserId) {
+      fetchAllUsers();
+      fetchUserInventory(); // Load inventory for offers
+    }
+  }, [currentUserId]);
+
   // --- IF NO USER SELECTED, SHOW USER LIST ---
   if (!otherUserId) {
     return (
@@ -347,6 +466,8 @@ const Messages = () => {
     );
   }
 
+
+
   // --- SHOW CHAT IF USER SELECTED ---
   return (
     <div className="min-h-screen bg-background">
@@ -371,8 +492,8 @@ const Messages = () => {
                   >
                     <div
                       className={`max-w-xs group relative ${isSentByUser
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
                         } px-4 py-2 rounded-lg`}
                     >
                       {isEditing ? (
@@ -418,18 +539,51 @@ const Messages = () => {
                                 {message.read ? "✓✓" : "✓"}
                               </p>
                             )}
+                            {message.is_transaction_offer && (
+                              <div className="mt-3 p-3 border rounded-md bg-background/20 text-foreground space-y-3">
+                                <p className="font-semibold text-sm">Transaction Proposal</p>
+
+                                {message.transaction_status === 'pending' ? (
+                                  !isSentByUser ? (
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        className="bg-green-600 hover:bg-green-700 h-8 text-white"
+                                        onClick={() => handleTransaction(message, true)}
+                                      >
+                                        Accept
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        className="h-8"
+                                        onClick={() => handleTransaction(message, false)}
+                                      >
+                                        Decline
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs italic opacity-70">Waiting for response...</p>
+                                  )
+                                ) : (
+                                  <p className={`text-sm font-bold ${message.transaction_status === 'accepted' ? 'text-green-500' : 'text-red-500'}`}>
+                                    Offer {message.transaction_status.toUpperCase()}
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </>
                       )}
 
                       {/* Edit/Delete buttons - only show for sent messages */}
                       {isSentByUser && !isEditing && (
-                        <div className="absolute -right-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => startEditMessage(message)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-200 hover:text-blue-700"
                           >
                             <Edit2 className="h-3 w-3" />
                           </Button>
@@ -437,7 +591,7 @@ const Messages = () => {
                             size="sm"
                             variant="ghost"
                             onClick={() => setDeletingMessageId(message.id)}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            className="h-8 w-8 p-0 text-destructive bg-red-50 hover:bg-red-200 hover:text-destructive"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -447,6 +601,7 @@ const Messages = () => {
                   </div>
                 );
               })}
+              <div ref={messagesEndRef} />
 
               {/* Move Typing Indicator Below Messages */}
               {otherUserTyping && (
@@ -461,16 +616,26 @@ const Messages = () => {
             </div>
 
             {/* Message input area */}
-            <form onSubmit={handleSendMessage} className="border-t p-4 flex gap-2">
+            <form onSubmit={handleSendMessage} className="border-t p-4 flex gap-2 items-center">
+              {/* Unified Offer Button */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOfferModalOpen(true)}
+                className="text-primary hover:bg-primary/10"
+              >
+                <PlusCircle className="h-6 w-6" /> {/* Import PlusCircle from lucide-react */}
+              </Button>
+
               <Input
                 type="text"
                 value={newMessage}
                 onChange={(e) => handleTyping(e.target.value)}
-                onBlur={() => setTyping(false)}
                 placeholder="Type your message..."
                 className="flex-1"
               />
-              <Button type="submit" className="bg-primary hover:bg-primary-hover">
+              <Button type="submit">
                 <Send className="h-4 w-4" />
               </Button>
             </form>
@@ -498,6 +663,74 @@ const Messages = () => {
               >
                 Delete
               </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={isOfferModalOpen} onOpenChange={setIsOfferModalOpen}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Offer an Item or Book</AlertDialogTitle>
+              <AlertDialogDescription>
+                Select something from your collection to offer for exchange.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div className="flex gap-4 border-b mb-4">
+              <button
+                onClick={() => setOfferTab('books')}
+                className={`pb-2 px-2 ${offerTab === 'books' ? 'border-b-2 border-primary font-bold' : 'opacity-50'}`}
+              >
+                Books ({userBooks.length})
+              </button>
+              <button
+                onClick={() => setOfferTab('items')}
+                className={`pb-2 px-2 ${offerTab === 'items' ? 'border-b-2 border-primary font-bold' : 'opacity-50'}`}
+              >
+                Items ({userItems.length})
+              </button>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {offerTab === 'books' ? (
+                userBooks.map(book => (
+                  <Button
+                    key={book.id}
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      sendOffer(book.id, book.title, 'book');
+                      setIsOfferModalOpen(false);
+                    }}
+                  >
+                    📖 {book.title}
+                  </Button>
+                ))
+              ) : (
+                userItems.map(item => (
+                  <Button
+                    key={item.id}
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      sendOffer(item.id, item.name, 'item');
+                      setIsOfferModalOpen(false);
+                    }}
+                  >
+                    📦 {item.name}
+                  </Button>
+                ))
+              )}
+
+              {(offerTab === 'books' ? userBooks : userItems).length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-4">
+                  No available {offerTab} found.
+                </p>
+              )}
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
