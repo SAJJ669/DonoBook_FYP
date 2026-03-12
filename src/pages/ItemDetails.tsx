@@ -10,6 +10,13 @@ import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { Rating } from "@/components/ui/rating";
 import { StatusBadge } from "@/components/StatusBadge";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 export type Item = Database['public']['Tables']['items']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -113,6 +120,28 @@ const ItemDetails = () => {
 
   const isOwner = currentUserId === item.owner_id;
 
+  const getImages = () => {
+    if (!item?.image_url) return ["/placeholder.svg"];
+
+    // If it's already an array, we're good
+    if (Array.isArray(item.image_url)) return item.image_url;
+
+    // If it's a string, check if it's a stringified JSON array
+    if (typeof item.image_url === 'string' && item.image_url.startsWith('[')) {
+      try {
+        return JSON.parse(item.image_url);
+      } catch (e) {
+        return [item.image_url];
+      }
+    }
+
+    // Default: it's a single string URL
+    return [item.image_url];
+  };
+
+  const images = getImages();
+
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -127,22 +156,31 @@ const ItemDetails = () => {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="shadow-card">
+          <Card className="shadow-card overflow-hidden">
             <CardContent className="p-6">
-              {item.image_url ? (
-                <img
-                  src={item.image_url}
-                  alt={item.name}
-                  className={`w-full h-96 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""
-                    }`}
-                />
-              ) : (
-                <img
-                  src="/placeholder.svg"
-                  alt="placeholder"
-                  className="w-full h-96 object-cover rounded-lg"
-                />
-              )}
+              <Carousel className="w-full max-w-xl mx-auto">
+                <CarouselContent>
+                  {images.map((url, index) => (
+                    <CarouselItem key={index}>
+                      <div className="p-1">
+                        <img
+                          src={url}
+                          alt={`${item.title} - image ${index + 1}`}
+                          className={`w-full h-96 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""
+                            }`}
+                        />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                {/* Only show arrows if there's more than one image */}
+                {images.length > 1 && (
+                  <>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                  </>
+                )}
+              </Carousel>
             </CardContent>
           </Card>
 
@@ -185,8 +223,8 @@ const ItemDetails = () => {
                     // DISABLE BUTTON IF NOT AVAILABLE
                     disabled={item.status !== "available"}
                     className={`w-full gap-2 text-lg py-6 ${item.status === "available"
-                        ? "bg-primary hover:bg-primary-hover"
-                        : "bg-muted text-muted-foreground"
+                      ? "bg-primary hover:bg-primary-hover"
+                      : "bg-muted text-muted-foreground"
                       }`}
                   >
                     <MessageSquare className="h-5 w-5" />

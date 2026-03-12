@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,11 @@ type Item = Database['public']['Tables']['items']['Row'];
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("tab") || "books";
+  });
   const { toast } = useToast();
   const [books, setBooks] = useState<Book[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -95,6 +100,25 @@ const Dashboard = () => {
     if (!session) navigate("/auth");
   };
 
+  const getImageUrl = (urlData: any) => {
+    if (!urlData) return "/placeholder.svg";
+
+    // If it's already an array
+    if (Array.isArray(urlData)) return urlData[0];
+
+    // If it's a stringified array (common with JSONB columns)
+    if (typeof urlData === 'string' && urlData.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(urlData);
+        return parsed[0];
+      } catch (e) {
+        return urlData;
+      }
+    }
+
+    return urlData;
+  };
+
   const fetchUserListings = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -139,22 +163,85 @@ const Dashboard = () => {
     }
   };
 
-  const handleDeleteBook = async (id: string) => {
+  const handleDeleteBook = async (id: string, imageUrls: string | string[] | null) => {
     try {
-      const { error } = await supabase.from("books").delete().eq("id", id);
-      if (error) throw error;
-      toast({ title: "Success", description: "Book deleted successfully" });
+      if (imageUrls) {
+        let urlsToDelete: string[] = [];
+        if (typeof imageUrls === 'string') {
+          try {
+            urlsToDelete = imageUrls.startsWith('[') ? JSON.parse(imageUrls) : [imageUrls];
+          } catch (e) {
+            urlsToDelete = [imageUrls];
+          }
+        } else if (Array.isArray(imageUrls)) {
+          urlsToDelete = imageUrls;
+        }
+
+        const filePaths = urlsToDelete.map(url => {
+          try {
+            const urlObj = new URL(url);
+            const pathWithParams = urlObj.pathname.split('/book-images/')[1];
+            return decodeURIComponent(pathWithParams.split('?')[0]);
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean) as string[];
+
+        if (filePaths.length > 0) {
+          // verify session before attempting delete
+          const { data: { session } } = await supabase.auth.getSession();
+
+          const { data, error: storageError } = await supabase.storage
+            .from("book-images")
+            .remove(filePaths);
+        }
+      }
+
+      const { error: dbError } = await supabase.from("books").delete().eq("id", id);
+      if (dbError) throw dbError;
+
+      toast({ title: "Success", description: "Listing deleted" });
       fetchUserListings();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to delete";
-      toast({ title: "Error", description: message, variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
-  const handleDeleteItem = async (id: string) => {
+  const handleDeleteItem = async (id: string, imageUrls: string | string[] | null) => {
     try {
+      if (imageUrls) {
+        let urlsToDelete: string[] = [];
+        if (typeof imageUrls === 'string') {
+          try {
+            urlsToDelete = imageUrls.startsWith('[') ? JSON.parse(imageUrls) : [imageUrls];
+          } catch (e) {
+            urlsToDelete = [imageUrls];
+          }
+        } else if (Array.isArray(imageUrls)) {
+          urlsToDelete = imageUrls;
+        }
+
+        const filePaths = urlsToDelete.map(url => {
+          try {
+            const urlObj = new URL(url);
+            const pathWithParams = urlObj.pathname.split('/item-images/')[1];
+            return decodeURIComponent(pathWithParams.split('?')[0]);
+          } catch (e) {
+            return null;
+          }
+        }).filter(Boolean) as string[];
+
+        if (filePaths.length > 0) {
+          const { error: storageError } = await supabase.storage
+            .from("item-images")
+            .remove(filePaths);
+
+        }
+      }
+
       const { error } = await supabase.from("items").delete().eq("id", id);
       if (error) throw error;
+
       toast({ title: "Success", description: "Item deleted successfully" });
       fetchUserListings();
     } catch (error: unknown) {
@@ -319,7 +406,7 @@ const Dashboard = () => {
             <p className="text-muted-foreground">Loading your inventory...</p>
           </div>
         ) : (
-          <Tabs defaultValue="books">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
               <TabsTrigger value="books" className="gap-2">
                 <BookOpen className="h-4 w-4" /> Books ({books.length})
@@ -354,7 +441,7 @@ const Dashboard = () => {
                   {books.map((book) => (
                     <Card key={book.id} className="shadow-card hover:shadow-soft transition-smooth">
                       <CardHeader>
-                        <img src={book.image_url || "/placeholder.svg"} alt={book.title} className={`w-full h-48 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""}`} />
+                        <img src={getImageUrl(book.image_url)} className={`w-full h-48 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{book.title}</CardTitle>
                         <CardDescription>
                           {book.grade && `Grade: ${book.grade} • `}{book.category} • {book.condition}
@@ -371,7 +458,7 @@ const Dashboard = () => {
                           <Button variant="outline" size="sm" onClick={() => openEdit(book, 'book')}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteBook(book.id)}>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteBook(book.id, book.image_url)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -397,7 +484,7 @@ const Dashboard = () => {
                   {items.map((item) => (
                     <Card key={item.id} className="shadow-card hover:shadow-soft transition-smooth">
                       <CardHeader>
-                        <img src={item.image_url || "/placeholder.svg"} alt={item.name} className={`w-full h-48 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""}`} />
+                        <img src={getImageUrl(item.image_url)} className={`w-full h-48 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{item.name}</CardTitle>
                         <CardDescription>
                           {item.category} • {item.condition} • {item.type}
@@ -414,7 +501,7 @@ const Dashboard = () => {
                           <Button variant="outline" size="sm" onClick={() => openEdit(item, 'item')}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleDeleteItem(item.id)}>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteItem(item.id, item.image_url)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -434,7 +521,7 @@ const Dashboard = () => {
                     {givenAway.map((item) => (
                       <Card key={item.id} className="opacity-80 grayscale-[0.3]">
                         <CardHeader className="p-4">
-                          <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
+                          <img src={getImageUrl(item.image_url)} className="h-32 w-full object-cover rounded-md mb-2" />
                           <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
                           {/* Conditional Status Display */}
                           <div className="flex items-center gap-2">
@@ -466,7 +553,7 @@ const Dashboard = () => {
                       return (
                         <Card key={item.id} className="border-green-200 bg-green-50/30">
                           <CardHeader className="p-4">
-                            <img src={item.image_url} className="h-32 w-full object-cover rounded-md mb-2" />
+                            <img src={getImageUrl(item.image_url)} className="h-32 w-full object-cover rounded-md mb-2" />
                             <CardTitle className="text-sm">{item.title || item.name}</CardTitle>
                             <div className="flex items-center gap-2">
 

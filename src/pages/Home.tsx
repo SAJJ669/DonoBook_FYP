@@ -218,6 +218,22 @@ const Home = () => {
   const filteredListings = getFilteredListings();
   const hasMore = hasMoreBooks || hasMoreItems;
 
+  const getThumbnail = (imageUrl: string | null) => {
+    if (!imageUrl) return "/placeholder.svg";
+
+    // If it's a JSON array string like '["url1", "url2"]'
+    if (imageUrl.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(imageUrl);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : "/placeholder.svg";
+      } catch (e) {
+        return imageUrl; // Fallback if it's not actually JSON
+      }
+    }
+
+    return imageUrl; // It's already a single string URL
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-primary-light/20 to-background">
       <Navbar />
@@ -381,7 +397,7 @@ const Home = () => {
                   >
                     <CardHeader className="p-0">
                       {item.image_url ? (
-                        <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover rounded-t-lg" />
+                        <img src={getThumbnail(item.image_url)} alt={item.name} className="w-full h-48 object-cover rounded-t-lg" />
                       ) : (
                         <img
                           src="/placeholder.svg"
@@ -410,7 +426,7 @@ const Home = () => {
                             <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Posted by</span>
                             <div className="flex items-center gap-1">
                               <span className="text-sm font-medium truncate max-w-[100px]">{item.owner?.name || 'User'}</span>
-                              {item.owner?.verified && <BadgeCheck className="h-4 w-4 text-white bg-blue-600 rounded-full "/>}
+                              {item.owner?.verified && <BadgeCheck className="h-4 w-4 text-white bg-blue-600 rounded-full " />}
                             </div>
                           </div>
                           <div className="flex flex-col items-end">

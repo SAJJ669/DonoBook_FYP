@@ -9,6 +9,13 @@ import { ArrowLeft, MessageSquare, Gift, RefreshCw, Clock, CheckCircle2 } from "
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { StatusBadge } from "@/components/StatusBadge";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -99,6 +106,27 @@ const BookDetails = () => {
 
   const isOwner = currentUserId === book.owner_id;
 
+  const getImages = () => {
+    if (!book?.image_url) return ["/placeholder.svg"];
+
+    // If it's already an array, we're good
+    if (Array.isArray(book.image_url)) return book.image_url;
+
+    // If it's a string, check if it's a stringified JSON array
+    if (typeof book.image_url === 'string' && book.image_url.startsWith('[')) {
+      try {
+        return JSON.parse(book.image_url);
+      } catch (e) {
+        return [book.image_url];
+      }
+    }
+
+    // Default: it's a single string URL
+    return [book.image_url];
+  };
+
+  const images = getImages();
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -113,23 +141,31 @@ const BookDetails = () => {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card className="shadow-card">
+          <Card className="shadow-card overflow-hidden">
             <CardContent className="p-6">
-              {book.image_url ? (
-                <img
-                  src={book.image_url}
-                  alt={book.title}
-                  className={`w-full h-96 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""
-                    }`}
-
-                />
-              ) : (
-                <img
-                  src="/placeholder.svg"
-                  alt="placeholder"
-                  className="w-full h-96 object-cover rounded-lg"
-                />
-              )}
+              <Carousel className="w-full max-w-xl mx-auto">
+                <CarouselContent>
+                  {images.map((url, index) => (
+                    <CarouselItem key={index}>
+                      <div className="p-1">
+                        <img
+                          src={url}
+                          alt={`${book.title} - image ${index + 1}`}
+                          className={`w-full h-96 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""
+                            }`}
+                        />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                {/* Only show arrows if there's more than one image */}
+                {images.length > 1 && (
+                  <>
+                    <CarouselPrevious className="left-2" />
+                    <CarouselNext className="right-2" />
+                  </>
+                )}
+              </Carousel>
             </CardContent>
           </Card>
 
@@ -173,8 +209,8 @@ const BookDetails = () => {
                     // DISABLE BUTTON IF NOT AVAILABLE (Might change this logic in future)
                     disabled={book.status !== "available"}
                     className={`w-full gap-2 text-lg py-6 ${book.status === "available"
-                        ? "bg-primary hover:bg-primary-hover"
-                        : "bg-muted text-muted-foreground"
+                      ? "bg-primary hover:bg-primary-hover"
+                      : "bg-muted text-muted-foreground"
                       }`}
                   >
                     <MessageSquare className="h-5 w-5" />

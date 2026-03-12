@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, BookOpen, Package } from "lucide-react";
+import { X } from 'lucide-react';
 
 type UploadType = "book" | "item";
 
@@ -17,7 +18,7 @@ const UploadItem = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [uploadType, setUploadType] = useState<UploadType>("book");
 
   // Book-specific form data
@@ -51,40 +52,87 @@ const UploadItem = () => {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
+    if (e.target.files) {
+      const fileArray = Array.from(e.target.files);
+      const maxAllowed = uploadType === "book" ? 4 : 2;
+
+      // Check if adding these files exceeds the limit
+      if (images.length + fileArray.length > maxAllowed) {
+        toast({
+          title: "Limit exceeded",
+          description: `You can only upload up to ${maxAllowed} images for this type.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const newImages = fileArray.map((file) => ({
+        file,
+        preview: URL.createObjectURL(file),
+      }));
+
+      setImages((prev) => [...prev, ...newImages]);
     }
   };
 
-  const uploadImage = async (userId: string, bucket: string) => {
-    if (!imageFile) return null;
+  const removeImage = (index: number) => {
+    setImages((prev) => {
+      const newImages = [...prev];
+      URL.revokeObjectURL(newImages[index].preview); // Clean up memory
+      newImages.splice(index, 1);
+      return newImages;
+    });
+  };
 
-    const fileExt = imageFile.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, imageFile);
+  const uploadAllImages = async (userId: string, bucket: string) => {
+    const uploadPromises = images.map(async ({ file }) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-    if (uploadError) throw uploadError;
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, file);
 
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(fileName);
+      if (uploadError) throw uploadError;
 
-    return publicUrl;
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    });
+
+    return Promise.all(uploadPromises);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Basic Validation: Ensure at least one image is uploaded
+    if (images.length === 0) {
+      toast({
+        title: "Missing images",
+        description: "Please upload at least one image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      if (uploadType === "book") {
-        const imageUrl = await uploadImage(user.id, 'book-images');
+      // 1. Determine which bucket to use
+      const bucket = uploadType === "book" ? 'book-images' : 'item-images';
 
+      // 2. Upload all images in the array and get back an array of URLs
+      // Using the function we created in the previous step
+      const imageUrls = await uploadAllImages(user.id, bucket);
+
+      // 3. Prepare the data based on uploadType
+      if (uploadType === "book") {
         const { error } = await supabase.from("books").insert([
           {
             title: bookFormData.title,
@@ -94,7 +142,9 @@ const UploadItem = () => {
             condition: bookFormData.condition as "new" | "used",
             description: bookFormData.description || null,
             owner_id: user.id,
-            image_url: imageUrl,
+            // If your DB column image_url is type text[], pass the whole array.
+            // If it's still just a string column, pass imageUrls[0] or change the column type!
+            image_url: imageUrls,
           },
         ]);
 
@@ -102,20 +152,19 @@ const UploadItem = () => {
 
         toast({
           title: "Success!",
-          description: "Book uploaded successfully",
+          description: "Book and photos uploaded successfully",
         });
       } else {
-        const imageUrl = await uploadImage(user.id, 'item-images');
-
+        // Logic for Items
         const { error } = await supabase.from("items").insert([
           {
             name: itemFormData.name,
-            category: itemFormData.category as "bag" | "water_bottle" | "pencil_box" | "lunchbox" | "stationery" | "other",
+            category: itemFormData.category,
             type: itemFormData.type as "donate" | "exchange",
             condition: itemFormData.condition as "new" | "used",
             description: itemFormData.description || null,
             owner_id: user.id,
-            image_url: imageUrl,
+            image_url: imageUrls, // Array of max 2 images
           },
         ]);
 
@@ -123,14 +172,17 @@ const UploadItem = () => {
 
         toast({
           title: "Success!",
-          description: "Item uploaded successfully",
+          description: "Item and photos uploaded successfully",
         });
       }
 
-      navigate("/dashboard");
+      // 4. Redirect to dashboard on success
+      navigate(uploadType === "book" ? "/dashboard?tab=books" : "/dashboard?tab=items");
+
     } catch (error: any) {
+      console.error("Upload error:", error);
       toast({
-        title: "Error",
+        title: "Upload Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -155,7 +207,7 @@ const UploadItem = () => {
       condition: "",
       description: "",
     });
-    setImageFile(null);
+    setImages([]);
   };
 
   const handleTypeChange = (type: UploadType) => {
@@ -200,18 +252,55 @@ const UploadItem = () => {
               </div>
 
               {/* Image Upload */}
-              <div className="space-y-2">
-                <Label htmlFor="image">{uploadType === "book" ? "Book" : "Item"} Image</Label>
-                <div className="flex items-center gap-4">
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="cursor-pointer"
-                  />
-                  <Upload className="h-5 w-5 text-muted-foreground" />
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <Label className="text-base font-semibold">
+                    {uploadType === "book" ? "Book Photos (Max 4)" : "Item Photos (Max 2)"}
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    {images.length} / {uploadType === "book" ? 4 : 2} uploaded
+                  </span>
                 </div>
+
+                {/* Image Grid Preview */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {images.map((img, index) => (
+                    <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
+                      <img src={img.preview} alt="preview" className="object-cover w-full h-full" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Upload Trigger (only shows if under limit) */}
+                  {images.length < (uploadType === "book" ? 4 : 2) && (
+                    <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-xs text-muted-foreground">Add Photo</p>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Helpful Tooltip */}
+                {uploadType === "book" && (
+                  <p className="text-[10px] text-muted-foreground leading-tight italic">
+                    Suggested: Front cover, back cover, inner pages (2), and spine.
+                  </p>
+                )}
               </div>
 
               {uploadType === "book" ? (
