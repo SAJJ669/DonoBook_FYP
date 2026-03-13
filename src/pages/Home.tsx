@@ -279,7 +279,7 @@ const Home = () => {
         <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           {[
             { icon: BookOpen, title: "Academic Gear", desc: "Textbooks, reference guides, and specialized lab manuals.", color: "text-primary" },
-            { icon: ShoppingBag, title: "Daily Essentials", desc: "Ergonomic school bags, lunch boxes, and water bottles.", color: "text-secondary" },
+            { icon: ShoppingBag, title: "Daily Essentials", desc: "School bags, lunch boxes, and water bottles.", color: "text-secondary" },
             { icon: PencilRuler, title: "Writing & Tools", desc: "Pencil boxes, geometry sets, calculators, and art supplies.", color: "text-primary" },
             { icon: Lamp, title: "Study Space", desc: "Desk organizers, lamps, and unused notebooks.", color: "text-secondary" },
           ].map((cat) => (

@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+// Updated to use relative paths to ensure resolution in this environment
+import Navbar from "../components/Navbar"; 
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Send, Bot, Loader2, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "../hooks/use-toast";
+import { supabase } from "../integrations/supabase/client";
 
 interface Message {
   role: "user" | "assistant";
@@ -133,8 +134,11 @@ const Assistant = () => {
     await saveMessage(userMessage);
 
     try {
-      const { data, error } = await supabase.functions.invoke("chat", {
-        body: { messages: [...messages, userMessage] },
+      // Optimization: Only send the last 10 messages to keep token usage low
+      const chatContext = [...messages, userMessage].slice(-10);
+
+      const { data, error } = await supabase.functions.invoke("chat-assistant", {
+        body: { messages: chatContext },
       });
 
       if (error) throw error;
@@ -160,6 +164,26 @@ const Assistant = () => {
     }
   };
 
+  // Helper to render basic markdown-like styles (bold and bullets)
+  const renderMessageContent = (content: string) => {
+    return content.split('\n').map((line, i) => {
+      // Handle bold text **text**
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      const renderedLine = parts.map((part, j) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={j} className="font-bold">{part.slice(2, -2)}</strong>;
+        }
+        return part;
+      });
+
+      return (
+        <div key={i} className={line.trim().startsWith('*') || line.trim().startsWith('•') ? "ml-4" : ""}>
+          {renderedLine}
+        </div>
+      );
+    });
+  };
+
   if (loadingHistory) {
     return (
       <div className="min-h-screen bg-background">
@@ -181,20 +205,19 @@ const Assistant = () => {
       <Navbar />
 
       <div className="container mx-auto px-4 py-8">
-        <Card className="shadow-card max-w-4xl mx-auto">
-
-          {/* Header */}
-          <CardHeader className="border-b bg-card">
+        <Card className="shadow-card max-w-4xl mx-auto border-none shadow-lg">
+          <CardHeader className="border-b bg-card rounded-t-xl">
             <div className="flex items-center justify-between">
-
               <div className="flex items-center gap-3">
-                <Bot className="h-8 w-8 text-primary" />
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Bot className="h-8 w-8 text-primary" />
+                </div>
                 <div>
                   <CardTitle className="font-heading text-foreground">
                     BookShare Assistant
                   </CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Your AI-powered guide to using BookNet
+                    AI Guide for Transactions & Safety
                   </CardDescription>
                 </div>
               </div>
@@ -203,7 +226,7 @@ const Assistant = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearHistory}
-                className="text-red-500 hover:text-red-700"
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 title="Clear chat history"
               >
                 <Trash2 className="h-4 w-4" />
@@ -211,36 +234,32 @@ const Assistant = () => {
             </div>
           </CardHeader>
 
-          {/* Chat Messages */}
           <CardContent className="p-0">
-            <div className="h-96 overflow-y-auto p-4 space-y-4 bg-background">
-
+            <div className="h-[500px] overflow-y-auto p-6 space-y-6 bg-slate-50/50">
               {messages.map((message, index) => (
                 <div
                   key={index}
                   className={`flex ${
-                    message.role === "user"
-                      ? "justify-end"
-                      : "justify-start"
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
                   <div
-                    className={`max-w-[80%] px-4 py-3 rounded-lg ${
+                    className={`max-w-[85%] px-5 py-3 rounded-2xl shadow-sm ${
                       message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-foreground"
+                        ? "bg-primary text-primary-foreground rounded-tr-none"
+                        : "bg-muted text-foreground border border-slate-100 rounded-tl-none"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <div className="text-sm leading-relaxed">
+                      {renderMessageContent(message.content)}
+                    </div>
                     {message.timestamp && (
                       <p
-                        className={`text-xs mt-1 ${
-                          message.role === "user"
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground"
+                        className={`text-[10px] mt-2 opacity-60 ${
+                          message.role === "user" ? "text-right" : "text-left"
                         }`}
                       >
-                        {new Date(message.timestamp).toLocaleString()}
+                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     )}
                   </div>
@@ -249,8 +268,12 @@ const Assistant = () => {
 
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-muted px-4 py-3 rounded-lg">
-                    <p className="text-muted-foreground">Thinking...</p>
+                  <div className="bg-white border border-slate-100 px-5 py-3 rounded-2xl rounded-tl-none shadow-sm">
+                    <div className="flex gap-1">
+                      <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce"></span>
+                      <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                      <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -258,22 +281,21 @@ const Assistant = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSubmit} className="border-t p-4 flex gap-2">
+            <form onSubmit={handleSubmit} className="border-t p-4 flex gap-3 bg-white rounded-b-xl">
               <Input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask me anything about BookShare..."
-                className="flex-1"
+                placeholder="Ask about exchange, donation, or safety..."
+                className="flex-1 bg-slate-50 border-none focus-visible:ring-1 focus-visible:ring-primary"
                 disabled={loading}
               />
               <Button
                 type="submit"
-                className="bg-primary hover:bg-primary-hover"
-                disabled={loading}
+                className="bg-primary hover:bg-primary/90 rounded-full px-6"
+                disabled={loading || !input.trim()}
               >
-                <Send className="h-4 w-4" />
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </form>
           </CardContent>

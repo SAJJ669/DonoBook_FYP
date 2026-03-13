@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Upload, BookOpen, Package } from "lucide-react";
 import { X } from 'lucide-react';
+import { scanBookImage } from "@/utils/geminiScanner";
 
 type UploadType = "book" | "item";
 
@@ -20,6 +21,7 @@ const UploadItem = () => {
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
   const [uploadType, setUploadType] = useState<UploadType>("book");
+  const [isScanning, setIsScanning] = useState(false); // State for UI feedback
 
   // Book-specific form data
   const [bookFormData, setBookFormData] = useState({
@@ -72,7 +74,47 @@ const UploadItem = () => {
       }));
 
       setImages((prev) => [...prev, ...newImages]);
+      if (uploadType === "book" && images.length === 0 && fileArray.length > 0) {
+        handleAIScan(fileArray[0]);
+      }
     }
+  };
+
+  const handleAIScan = async (file: File) => {
+    setIsScanning(true);
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const base64Data = (reader.result as string).split(",")[1];
+        toast({ title: "AI Scanning...", description: "Analyzing book cover..." });
+
+        const aiResult = await scanBookImage(base64Data, file.type);
+
+        // Map the AI result to your bookFormData
+        setBookFormData(prev => ({
+          ...prev,
+          title: aiResult.title || prev.title,
+          grade: aiResult.grade === "None" ? "" : aiResult.grade,
+          // Match the "new" or "used" value expected by your <Select>
+          category: aiResult.category.toLowerCase().includes("textbook") ? "textbook" : "reading_book",
+          condition: aiResult.condition.toLowerCase().includes("new") ? "new" : "used",
+          description: aiResult.description || prev.description,
+        }));
+
+        toast({ title: "Scan Complete", description: "Details auto-filled!" });
+      } catch (error) {
+        console.error("AI Scan failed", error);
+        toast({
+          title: "Scan Failed",
+          description: "Could not read book details. Please enter them manually.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsScanning(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const removeImage = (index: number) => {
@@ -313,8 +355,16 @@ const UploadItem = () => {
                       type="text"
                       value={bookFormData.title}
                       onChange={(e) => setBookFormData({ ...bookFormData, title: e.target.value })}
+                      placeholder={isScanning ? "AI is reading title..." : ""}
+                      disabled={isScanning}
+                      className={isScanning ? "animate-pulse border-primary" : ""}
                       required
                     />
+                    {isScanning && (
+                      <span className="absolute right-3 top-2 text-xs text-primary animate-bounce">
+                        ✨ AI
+                      </span>
+                    )}
                   </div>
 
                   <div className="space-y-2">
