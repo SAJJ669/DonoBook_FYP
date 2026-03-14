@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, BookOpen, Gift, RefreshCw, Package, Lamp, PencilRuler, ShoppingBag, Loader2, BadgeCheck } from "lucide-react";
+import { Search, Backpack, BookOpen, BookOpenText, Gift, RefreshCw, Package, GraduationCap, PencilRuler, ShoppingBag, Loader2, BadgeCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -278,10 +278,10 @@ const Home = () => {
         </div>
         <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           {[
-            { icon: BookOpen, title: "Academic Gear", desc: "Textbooks, reference guides, and specialized lab manuals.", color: "text-primary" },
-            { icon: ShoppingBag, title: "Daily Essentials", desc: "School bags, lunch boxes, and water bottles.", color: "text-secondary" },
-            { icon: PencilRuler, title: "Writing & Tools", desc: "Pencil boxes, geometry sets, calculators, and art supplies.", color: "text-primary" },
-            { icon: Lamp, title: "Study Space", desc: "Desk organizers, lamps, and unused notebooks.", color: "text-secondary" },
+            { icon: BookOpenText, title: "Academic Gear", desc: "Textbooks, reference guides, and story books.", color: "text-primary" },
+            { icon: Backpack, title: "Daily Essentials", desc: "School bags, lunch boxes, and water bottles.", color: "text-secondary" },
+            { icon: PencilRuler, title: "Writing & Tools", desc: "Pencil boxes, geometry sets, and calculators.", color: "text-primary" },
+            { icon: ShoppingBag, title: "School Apparel", desc: "School uniforms, and other required clothing items.", color: "text-secondary" }
           ].map((cat) => (
             <motion.div key={cat.title} variants={fadeUp} transition={{ duration: 0.5 }}>
               <Card className="hover:shadow-lg transition-all hover:-translate-y-1">

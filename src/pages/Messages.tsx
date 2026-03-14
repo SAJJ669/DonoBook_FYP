@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, Edit2, Trash2, X, Check, PlusCircle } from "lucide-react";
+import { Send, Edit2, Trash2, X, Check, PlusCircle, Package, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
@@ -43,6 +43,10 @@ const Messages = () => {
   const [userBooks, setUserBooks] = useState<any[]>([]);
   const [userItems, setUserItems] = useState<any[]>([]);
   const [offerTab, setOfferTab] = useState<'books' | 'items'>('books');
+
+  // For handling bundled offers
+  const [selectedBooks, setSelectedBooks] = useState<string[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
   // For loading chat from last conversation
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -334,44 +338,97 @@ const Messages = () => {
     }
   };
 
-  const sendOffer = async (id: string, title: string, type: 'book' | 'item') => {
-    if (!currentUserId || !otherUserId) return;
+  // const sendOffer = async (id: string, title: string, type: 'book' | 'item') => {
+  //   if (!currentUserId || !otherUserId) return;
 
-    const table = type === 'book' ? 'books' : 'items';
+  //   const table = type === 'book' ? 'books' : 'items';
 
-    // 1. Update the item status to 'pending' in the DB
-    const { error: statusError } = await supabase
-      .from(table)
-      .update({ status: 'pending', is_available: false })
-      .eq('id', id);
+  //   // 1. Update the item status to 'pending' in the DB
+  //   const { error: statusError } = await supabase
+  //     .from(table)
+  //     .update({ status: 'pending', is_available: false })
+  //     .eq('id', id);
 
-    if (statusError) {
-      toast({ title: "Error", description: "This item is no longer available", variant: "destructive" });
-      return;
+  //   if (statusError) {
+  //     toast({ title: "Error", description: "This item is no longer available", variant: "destructive" });
+  //     return;
+  //   }
+
+  //   // 2. Insert the message (your existing code)
+  //   const offerData = {
+  //     sender_id: currentUserId,
+  //     receiver_id: otherUserId,
+  //     is_transaction_offer: true,
+  //     text: `I would like to give/exchange my ${type}: "${title}". Do you accept?`,
+  //     transaction_status: 'pending',
+  //     [type === 'book' ? 'book_id' : 'item_id']: id
+  //   };
+
+  //   await supabase.from("user_messages").insert([offerData]);
+
+  //   // Refresh inventory so the book disappears from the "Offer" list immediately
+  //   fetchUserInventory();
+  //   toast({ title: "Offer Sent!", description: `${title} is now pending.` });
+  // };
+
+  const handleToggleSelection = (id: string, type: 'book' | 'item') => {
+    if (type === 'book') {
+      setSelectedBooks(prev => prev.includes(id) ? prev.filter(bid => bid !== id) : [...prev, id]);
+    } else {
+      setSelectedItems(prev => prev.includes(id) ? prev.filter(iid => iid !== id) : [...prev, id]);
     }
+  };
 
-    // 2. Insert the message (your existing code)
-    const offerData = {
-      sender_id: currentUserId,
-      receiver_id: otherUserId,
-      is_transaction_offer: true,
-      text: `I would like to give/exchange my ${type}: "${title}". Do you accept?`,
-      transaction_status: 'pending',
-      [type === 'book' ? 'book_id' : 'item_id']: id
-    };
 
-    await supabase.from("user_messages").insert([offerData]);
+  // Sending Offer for multiple items 
+  const sendOffer = async () => {
+    if (!currentUserId || !otherUserId || (selectedBooks.length === 0 && selectedItems.length === 0)) return;
 
-    // Refresh inventory so the book disappears from the "Offer" list immediately
-    fetchUserInventory();
-    toast({ title: "Offer Sent!", description: `${title} is now pending.` });
+    try {
+      if (selectedBooks.length > 0) {
+        await supabase.from("books").update({ status: 'pending', is_available: false }).in('id', selectedBooks);
+      }
+      if (selectedItems.length > 0) {
+        await supabase.from("items").update({ status: 'pending', is_available: false }).in('id', selectedItems);
+      }
+
+      const bookTitles = userBooks.filter(b => selectedBooks.includes(b.id)).map(b => b.title);
+      const itemNames = userItems.filter(i => selectedItems.includes(i.id)).map(i => i.name);
+      const totalItems = [...bookTitles, ...itemNames];
+
+      const bundleText = totalItems.length > 1
+        ? `I have a bundle offer for you: ${totalItems.join(", ")}. Would you like to accept?`
+        : `I would like to offer my ${bookTitles.length ? 'book' : 'item'}: "${totalItems[0]}". Do you accept?`;
+
+      const { error } = await supabase.from("user_messages").insert([{
+        sender_id: currentUserId,
+        receiver_id: otherUserId,
+        is_transaction_offer: true,
+        text: bundleText,
+        transaction_status: 'pending',
+        book_id: selectedBooks[0] || null,
+        item_id: selectedItems[0] || null,
+        book_ids: selectedBooks,
+        item_ids: selectedItems,
+      }]);
+
+      if (error) throw error;
+
+      toast({ title: "Bundle Offer Sent!", description: `Offered ${totalItems.length} items.` });
+      setIsOfferModalOpen(false);
+      setSelectedBooks([]);
+      setSelectedItems([]);
+      fetchUserInventory();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Failed to send offer", variant: "destructive" });
+    }
   };
 
   // Handle Accept/Decline Logic
+  // It should only handle arrays of items/books so we might need to remove book_id and item_id from messages table in future
   const handleTransaction = async (message: any, accept: boolean) => {
     try {
-      const table = message.book_id ? "books" : "items";
-      const targetId = message.book_id || message.item_id;
 
       // 1. Update Message Status
       await supabase
@@ -379,18 +436,42 @@ const Messages = () => {
         .update({ transaction_status: accept ? "accepted" : "declined" })
         .eq("id", message.id);
 
-      // 2. Update Item Status
-      const newStatus = accept ? "claimed" : "available";
-      const { error: updateError } = await supabase
-        .from(table)
-        .update({
-          status: newStatus,
-          is_available: accept ? false : true,
-          receiver_id: accept ? message.receiver_id : null // Save who received it!
-        })
-        .eq("id", targetId);
+      // 2. Collect all book/item IDs (support both old single-ID and new array format)
+      const bookIds: string[] = message.book_ids?.length
+        ? message.book_ids
+        : message.book_id ? [message.book_id] : [];
 
-      if (updateError) throw updateError;
+      const itemIds: string[] = message.item_ids?.length
+        ? message.item_ids
+        : message.item_id ? [message.item_id] : [];
+
+      // 3. Update all books
+      if (bookIds.length > 0) {
+        const { error } = await supabase
+          .from("books")
+          .update({
+            status: accept ? "claimed" : "available",
+            is_available: !accept,
+            receiver_id: accept ? message.receiver_id : null,
+          })
+          .in("id", bookIds);  // .in() updates ALL matching rows at once
+
+        if (error) throw error;
+      }
+
+      // 4. Update all items
+      if (itemIds.length > 0) {
+        const { error } = await supabase
+          .from("items")
+          .update({
+            status: accept ? "claimed" : "available",
+            is_available: !accept,
+            receiver_id: accept ? message.receiver_id : null,
+          })
+          .in("id", itemIds);
+
+        if (error) throw error;
+      }
 
       toast({
         title: accept ? "Transaction Accepted" : "Offer Declined",
@@ -625,7 +706,7 @@ const Messages = () => {
                 onClick={() => setIsOfferModalOpen(true)}
                 className="text-primary hover:bg-primary/10"
               >
-                <PlusCircle className="h-6 w-6" /> {/* Import PlusCircle from lucide-react */}
+                <PlusCircle className="h-6 w-6" />
               </Button>
 
               <Input
@@ -693,32 +774,24 @@ const Messages = () => {
 
             <div className="max-h-60 overflow-y-auto space-y-2">
               {offerTab === 'books' ? (
-                userBooks.map(book => (
-                  <Button
-                    key={book.id}
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      sendOffer(book.id, book.title, 'book');
-                      setIsOfferModalOpen(false);
-                    }}
-                  >
-                    📖 {book.title}
-                  </Button>
+                userBooks.map(b => (
+                  <div key={b.id} onClick={() => handleToggleSelection(b.id, 'book')} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedBooks.includes(b.id) ? "bg-primary/5 border-primary shadow-sm" : "hover:bg-slate-50"}`}>
+                    <div className={`w-5 h-5 rounded flex items-center justify-center border ${selectedBooks.includes(b.id) ? "bg-primary border-primary text-white" : "bg-white"}`}>
+                      {selectedBooks.includes(b.id) && <Check className="h-3 w-3" />}
+                    </div>
+                    <BookOpen className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm font-medium flex-1">{b.title}</span>
+                  </div>
                 ))
               ) : (
-                userItems.map(item => (
-                  <Button
-                    key={item.id}
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      sendOffer(item.id, item.name, 'item');
-                      setIsOfferModalOpen(false);
-                    }}
-                  >
-                    📦 {item.name}
-                  </Button>
+                userItems.map(i => (
+                  <div key={i.id} onClick={() => handleToggleSelection(i.id, 'item')} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedItems.includes(i.id) ? "bg-primary/5 border-primary shadow-sm" : "hover:bg-slate-50"}`}>
+                    <div className={`w-5 h-5 rounded flex items-center justify-center border ${selectedItems.includes(i.id) ? "bg-primary border-primary text-white" : "bg-white"}`}>
+                      {selectedItems.includes(i.id) && <Check className="h-3 w-3" />}
+                    </div>
+                    <Package className="h-4 w-4 text-slate-400" />
+                    <span className="text-sm font-medium flex-1">{i.name}</span>
+                  </div>
                 ))
               )}
 
@@ -729,7 +802,9 @@ const Messages = () => {
               )}
             </div>
 
+            <span className="text-xs">Selected: {selectedBooks.length + selectedItems.length}</span>
             <AlertDialogFooter>
+              <Button size="sm" onClick={sendOffer} disabled={selectedBooks.length === 0 && selectedItems.length === 0}>Send Offer</Button>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
