@@ -12,8 +12,8 @@ export const scanBookImage = async (base64Image: string, mimeType: string) => {
         Analyze this book cover image. 
         Return a strictly valid JSON object with these keys:
         {
-          "title": "Full name of the book",
-          "grade": "Specific class like 'Class 10' or 'None'",
+          "title": "Full book title in English. If the title is in Urdu or Sindhi, romanize it (e.g. 'Urdu Lazmi'). Never use original script.",
+          "grade": "Specific class as 'Class 1' through 'Class 12', or 'None' if not found. Never use roman numerals.",
           "category": "Specific like 'Textbook' or 'Reading book'",
           "condition": "New, Used - Like New, Used - Fair, or Worn",
           "description": "Two-sentence summary"
