@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package } from "lucide-react";
+import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { Rating } from "@/components/ui/rating";
@@ -209,6 +209,19 @@ const ItemDetails = () => {
                     {getCategoryLabel(item.category)}
                   </Badge>
                 </div>
+
+                {/* ── OWNER ADDRESS ── */}
+                {owner?.address && !isOwner && (
+                  <div className="pt-4 border-t">
+                    <h3 className="font-heading font-semibold mb-2">Location</h3>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-violet-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">{owner.address}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {item.description && (
                   <div className="pt-4 border-t">
