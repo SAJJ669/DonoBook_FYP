@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -27,31 +27,36 @@ const EditItemDialog = ({ open, onOpenChange, item, itemType, onSaved }: EditIte
   const book = itemType === 'book' ? (item as Book) : null;
   const generalItem = itemType === 'item' ? (item as Item) : null;
 
-  const [formData, setFormData] = useState(() => getInitialData());
+  const [formData, setFormData] = useState({
+    title: "", grade: "", category: "", type: "", condition: "", description: ""
+  });
 
-  function getInitialData() {
-    if (itemType === 'book' && book) {
-      return {
-        title: book.title,
+  // Runs every time the dialog opens or the item changes
+  useEffect(() => {
+    if (!open || !item) return;
+
+    if (itemType === 'book') {
+      const book = item as Book;
+      setFormData({
+        title: book.title || "",
         grade: book.grade || "",
-        category: book.category,
-        type: book.type,
-        condition: book.condition,
+        category: book.category || "",
+        type: book.type || "",
+        condition: book.condition || "",
         description: book.description || "",
-      };
-    }
-    if (itemType === 'item' && generalItem) {
-      return {
-        title: generalItem.name,
+      });
+    } else {
+      const generalItem = item as Item;
+      setFormData({
+        title: generalItem.name || "",
         grade: "",
-        category: generalItem.category,
-        type: generalItem.type,
-        condition: generalItem.condition,
+        category: generalItem.category || "",
+        type: generalItem.type || "",
+        condition: generalItem.condition || "",
         description: generalItem.description || "",
-      };
+      });
     }
-    return { title: "", grade: "", category: "", type: "", condition: "", description: "" };
-  }
+  }, [open, item, itemType]); // re-runs whenever dialog opens or item switches
 
   // Reset form when item changes
   const resetForm = () => {
