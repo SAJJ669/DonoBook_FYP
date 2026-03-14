@@ -7,10 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Backpack, BookOpen, BookOpenText, Gift, RefreshCw, Package, GraduationCap, PencilRuler, ShoppingBag, Loader2, BadgeCheck } from "lucide-react";
+import { Search, Backpack, BookOpen, BookOpenText, Gift, RefreshCw, Package, GraduationCap, PencilRuler, ShoppingBag, Loader2, BadgeCheck, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
-import { StatusBadge } from "@/components/StatusBadge";
 import { UserReputation } from '@/components/UserReputation'
 
 type Book = Database['public']['Tables']['books']['Row'];
@@ -30,6 +29,7 @@ type ListingItem = {
   owner?: {
     name: string;
     received_reviews: { rating: number }[];
+    address: string;
   };
 };
 
@@ -66,8 +66,8 @@ const Home = () => {
   const fetchInitial = async () => {
     try {
       // We define the select string once since it's used for both
-      const bookSelect = `*, owner:profiles!books_owner_id_fkey(name, verified, received_reviews:reviews!reviewee_id(rating))`;
-      const itemSelect = `*, owner:profiles!items_owner_id_fkey(name, verified, received_reviews:reviews!reviewee_id(rating))`;
+      const bookSelect = `*, owner:profiles!books_owner_id_fkey(name, verified, address, received_reviews:reviews!reviewee_id(rating))`;
+      const itemSelect = `*, owner:profiles!items_owner_id_fkey(name, verified, address, received_reviews:reviews!reviewee_id(rating))`;
 
       const [booksResult, itemsResult] = await Promise.all([
         supabase.from("books")
@@ -105,8 +105,8 @@ const Home = () => {
     if (loadingMore || (!hasMoreBooks && !hasMoreItems)) return;
     setLoadingMore(true);
     try {
-      const bookSelect = `*, owner:profiles!books_owner_id_fkey(name, verified, received_reviews:reviews!reviewee_id(rating))`;
-      const itemSelect = `*, owner:profiles!items_owner_id_fkey(name, verified, received_reviews:reviews!reviewee_id(rating))`;
+      const bookSelect = `*, owner:profiles!books_owner_id_fkey(name, verified, address, received_reviews:reviews!reviewee_id(rating))`;
+      const itemSelect = `*, owner:profiles!items_owner_id_fkey(name, verified, address, received_reviews:reviews!reviewee_id(rating))`;
 
       let newBooks: any[] = [];
       let newItems: any[] = [];
@@ -418,15 +418,20 @@ const Home = () => {
                           <Badge variant="secondary" className="text-xs">
                             {item.itemType === 'book' ? <><BookOpen className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</> : <><Package className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>}
                           </Badge>
-                          {/* <StatusBadge status={item.status} /> */}
                         </div>
+
                         {/*  OWNER REPUTATION SECTION */}
+
                         <div className="pt-2 border-t flex items-center justify-between">
                           <div className="flex flex-col">
                             <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Posted by</span>
                             <div className="flex items-center gap-1">
                               <span className="text-sm font-medium truncate max-w-[100px]">{item.owner?.name || 'User'}</span>
                               {item.owner?.verified && <BadgeCheck className="h-4 w-4 text-white bg-blue-600 rounded-full " />}
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <MapPin className="h-3 w-3 text-violet-500 mt-0.5" />
+                              <p className="text-[12px] text-muted-foreground">{item.owner?.address}</p>
                             </div>
                           </div>
                           <div className="flex flex-col items-end">

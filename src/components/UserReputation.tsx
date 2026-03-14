@@ -9,7 +9,7 @@ export const UserReputation = ({ reviews }: { reviews: any[] }) => {
   const average = totalRating / reviews.length;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-col items-center gap-1.5">
       <div className="flex items-center bg-amber-100 px-2 py-0.5 rounded-full">
         <Star className="h-3 w-3 fill-amber-500 text-amber-500 mr-1" />
         <span className="text-xs font-bold text-amber-700">{average.toFixed(1)}</span>
