@@ -9,6 +9,7 @@ import { Send, Edit2, Trash2, X, Check, PlusCircle, Package, BookOpen } from "lu
 import { useToast } from "@/hooks/use-toast";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import SafetyBanner from "@/components/SafetyBanner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -722,7 +723,9 @@ const Messages = () => {
             </form>
           </CardContent>
         </Card>
-
+        <div>
+          <SafetyBanner/>
+        </div>
         {/* Delete confirmation dialog */}
         <AlertDialog
           open={!!deletingMessageId}
