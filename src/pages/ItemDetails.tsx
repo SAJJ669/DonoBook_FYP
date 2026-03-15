@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package, MapPin } from "lucide-react";
+import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package, MapPin, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { Rating } from "@/components/ui/rating";
@@ -30,11 +30,25 @@ const ItemDetails = () => {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     fetchItemDetails();
     getCurrentUser();
   }, [id]);
+
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+      if (e.key === "ArrowRight") setLightboxIndex(i => (i + 1) % images.length);
+      if (e.key === "ArrowLeft") setLightboxIndex(i => (i - 1 + images.length) % images.length);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxOpen]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -163,10 +177,12 @@ const ItemDetails = () => {
                   {images.map((url, index) => (
                     <CarouselItem key={index}>
                       <div className="p-1">
+                        {/* Clicking the image opens the lightbox */}
                         <img
                           src={url}
                           alt={`${item.title} - image ${index + 1}`}
-                          className={`w-full h-96 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""
+                          onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }}
+                          className={`w-full h-96 object-cover rounded-lg transition-all cursor-zoom-in ${item.status !== "available" ? "grayscale opacity-60" : ""
                             }`}
                         />
                       </div>
@@ -181,6 +197,9 @@ const ItemDetails = () => {
                   </>
                 )}
               </Carousel>
+              <p className="text-xs text-center text-muted-foreground mt-3">
+                Click image to view full size
+              </p>
             </CardContent>
           </Card>
 
@@ -264,6 +283,62 @@ const ItemDetails = () => {
           </div>
         </div>
       </div>
+      {/* ── LIGHTBOX ── */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* Close button */}
+          <button
+            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Prev arrow */}
+          {images.length > 1 && (
+            <button
+              className="absolute left-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + images.length) % images.length); }}
+            >
+              <ChevronLeft className="h-7 w-7" />
+            </button>
+          )}
+
+          {/* Full image — stops click from closing when clicking the image itself */}
+          <img
+            src={images[lightboxIndex]}
+            alt={`${item.title} - full view`}
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next arrow */}
+          {images.length > 1 && (
+            <button
+              className="absolute right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % images.length); }}
+            >
+              <ChevronRight className="h-7 w-7" />
+            </button>
+          )}
+
+          {/* Dot indicators */}
+          {images.length > 1 && (
+            <div className="absolute bottom-6 flex gap-2">
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
+                  className={`w-2 h-2 rounded-full transition ${i === lightboxIndex ? "bg-white" : "bg-white/40"}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

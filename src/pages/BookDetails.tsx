@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MessageSquare, Gift, RefreshCw, Clock, CheckCircle2, MapPin } from "lucide-react";
+import { ArrowLeft, MessageSquare, Gift, RefreshCw, MapPin, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -29,10 +29,26 @@ const BookDetails = () => {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   useEffect(() => {
     fetchBookDetails();
     getCurrentUser();
   }, [id]);
+
+  // Close lightbox on Escape key
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+      if (e.key === "ArrowRight") setLightboxIndex(i => (i + 1) % images.length);
+      if (e.key === "ArrowLeft") setLightboxIndex(i => (i - 1 + images.length) % images.length);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [lightboxOpen]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -59,11 +75,7 @@ const BookDetails = () => {
       if (profileError) throw profileError;
       setOwner(profileData);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
       navigate("/");
     } finally {
       setLoading(false);
@@ -71,21 +83,15 @@ const BookDetails = () => {
   };
 
   const handleContact = () => {
-    if (!currentUserId) {
-      navigate("/auth");
-      return;
-    }
+    if (!currentUserId) { navigate("/auth"); return; }
     navigate(`/messages?userId=${book?.owner_id}`);
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "donate":
-        return <Gift className="h-5 w-5" />;
-      case "exchange":
-        return <RefreshCw className="h-5 w-5" />;
-      default:
-        return null;
+      case "donate": return <Gift className="h-5 w-5" />;
+      case "exchange": return <RefreshCw className="h-5 w-5" />;
+      default: return null;
     }
   };
 
@@ -100,28 +106,16 @@ const BookDetails = () => {
     );
   }
 
-  if (!book) {
-    return null;
-  }
+  if (!book) return null;
 
   const isOwner = currentUserId === book.owner_id;
 
   const getImages = () => {
     if (!book?.image_url) return ["/placeholder.svg"];
-
-    // If it's already an array, we're good
     if (Array.isArray(book.image_url)) return book.image_url;
-
-    // If it's a string, check if it's a stringified JSON array
     if (typeof book.image_url === 'string' && book.image_url.startsWith('[')) {
-      try {
-        return JSON.parse(book.image_url);
-      } catch (e) {
-        return [book.image_url];
-      }
+      try { return JSON.parse(book.image_url); } catch (e) { return [book.image_url]; }
     }
-
-    // Default: it's a single string URL
     return [book.image_url];
   };
 
@@ -131,13 +125,8 @@ const BookDetails = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(-1)}
-          className="mb-6 gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6 gap-2">
+          <ArrowLeft className="h-4 w-4" /> Back
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -148,17 +137,19 @@ const BookDetails = () => {
                   {images.map((url, index) => (
                     <CarouselItem key={index}>
                       <div className="p-1">
+                        {/* Clicking the image opens the lightbox */}
                         <img
                           src={url}
                           alt={`${book.title} - image ${index + 1}`}
-                          className={`w-full h-96 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""
-                            }`}
+                          onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }}
+                          className={`w-full h-96 object-cover rounded-lg transition-all cursor-zoom-in ${
+                            book.status !== "available" ? "grayscale opacity-60" : ""
+                          }`}
                         />
                       </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                {/* Only show arrows if there's more than one image */}
                 {images.length > 1 && (
                   <>
                     <CarouselPrevious className="left-2" />
@@ -166,6 +157,10 @@ const BookDetails = () => {
                   </>
                 )}
               </Carousel>
+              {/* Hint text */}
+              <p className="text-xs text-center text-muted-foreground mt-3">
+                Click image to view full size
+              </p>
             </CardContent>
           </Card>
 
@@ -195,15 +190,12 @@ const BookDetails = () => {
                   </Badge>
                 </div>
 
-                {/* ── OWNER ADDRESS ── */}
                 {owner?.address && !isOwner && (
                   <div className="pt-4 border-t">
                     <h3 className="font-heading font-semibold mb-2">Location</h3>
                     <div className="flex items-start gap-2">
                       <MapPin className="h-4 w-4 text-violet-500 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">{owner.address}</p>
-                      </div>
+                      <p className="text-sm text-muted-foreground">{owner.address}</p>
                     </div>
                   </div>
                 )}
@@ -218,12 +210,12 @@ const BookDetails = () => {
                 {!isOwner && (
                   <Button
                     onClick={handleContact}
-                    // DISABLE BUTTON IF NOT AVAILABLE (Might change this logic in future)
                     disabled={book.status !== "available"}
-                    className={`w-full gap-2 text-lg py-6 ${book.status === "available"
-                      ? "bg-primary hover:bg-primary-hover"
-                      : "bg-muted text-muted-foreground"
-                      }`}
+                    className={`w-full gap-2 text-lg py-6 ${
+                      book.status === "available"
+                        ? "bg-primary hover:bg-primary-hover"
+                        : "bg-muted text-muted-foreground"
+                    }`}
                   >
                     <MessageSquare className="h-5 w-5" />
                     {book.status === "available" ? "Contact Owner" : "Currently Unavailable"}
@@ -235,11 +227,7 @@ const BookDetails = () => {
                     <p className="text-sm text-muted-foreground">
                       This is your listing. Go to your dashboard to edit or delete it.
                     </p>
-                    <Button
-                      onClick={() => navigate("/dashboard")}
-                      variant="outline"
-                      className="w-full mt-4"
-                    >
+                    <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full mt-4">
                       Go to Dashboard
                     </Button>
                   </div>
@@ -249,6 +237,63 @@ const BookDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* ── LIGHTBOX ── */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+          onClick={() => setLightboxOpen(false)}
+        >
+          {/* Close button */}
+          <button
+            className="absolute top-4 right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+            onClick={() => setLightboxOpen(false)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Prev arrow */}
+          {images.length > 1 && (
+            <button
+              className="absolute left-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(i => (i - 1 + images.length) % images.length); }}
+            >
+              <ChevronLeft className="h-7 w-7" />
+            </button>
+          )}
+
+          {/* Full image — stops click from closing when clicking the image itself */}
+          <img
+            src={images[lightboxIndex]}
+            alt={`${book.title} - full view`}
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Next arrow */}
+          {images.length > 1 && (
+            <button
+              className="absolute right-4 text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex(i => (i + 1) % images.length); }}
+            >
+              <ChevronRight className="h-7 w-7" />
+            </button>
+          )}
+
+          {/* Dot indicators */}
+          {images.length > 1 && (
+            <div className="absolute bottom-6 flex gap-2">
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setLightboxIndex(i); }}
+                  className={`w-2 h-2 rounded-full transition ${i === lightboxIndex ? "bg-white" : "bg-white/40"}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
