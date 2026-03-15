@@ -12,210 +12,101 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      ai_settings: {
-        Row: {
-          description: string | null
-          id: string
-          setting_key: string
-          setting_value: Json
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          description?: string | null
-          id?: string
-          setting_key: string
-          setting_value: Json
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          description?: string | null
-          id?: string
-          setting_key?: string
-          setting_value?: Json
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: []
-      }
-      book_metadata: {
-        Row: {
-          author: string | null
-          confidence_score: number | null
-          cover_image_url: string | null
-          created_at: string | null
-          description: string | null
-          dimensions: Json | null
-          edition: string | null
-          id: string
-          isbn: string | null
-          metadata_source: string | null
-          page_count: number | null
-          publication_year: number | null
-          publisher: string | null
-          subjects: string[] | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          author?: string | null
-          confidence_score?: number | null
-          cover_image_url?: string | null
-          created_at?: string | null
-          description?: string | null
-          dimensions?: Json | null
-          edition?: string | null
-          id?: string
-          isbn?: string | null
-          metadata_source?: string | null
-          page_count?: number | null
-          publication_year?: number | null
-          publisher?: string | null
-          subjects?: string[] | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          author?: string | null
-          confidence_score?: number | null
-          cover_image_url?: string | null
-          created_at?: string | null
-          description?: string | null
-          dimensions?: Json | null
-          edition?: string | null
-          id?: string
-          isbn?: string | null
-          metadata_source?: string | null
-          page_count?: number | null
-          publication_year?: number | null
-          publisher?: string | null
-          subjects?: string[] | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       books: {
         Row: {
-          ai_extracted_data: Json | null
-          back_image_url: string | null
-          binder_image_url: string | null
           category: Database["public"]["Enums"]["book_category"]
           condition: Database["public"]["Enums"]["book_condition"]
           created_at: string
           description: string | null
-          dimensions: Json | null
-          front_image_url: string | null
           grade: string | null
+          handover_confirmed: boolean | null
           id: string
           image_url: string | null
-          inner_pages: Json | null
-          isbn: string | null
-          metadata_id: string | null
+          is_available: boolean
           owner_id: string
-          price: number | null
+          receiver_id: string | null
+          status: string | null
           title: string
           type: Database["public"]["Enums"]["book_type"]
           updated_at: string
         }
         Insert: {
-          ai_extracted_data?: Json | null
-          back_image_url?: string | null
-          binder_image_url?: string | null
           category: Database["public"]["Enums"]["book_category"]
           condition: Database["public"]["Enums"]["book_condition"]
           created_at?: string
           description?: string | null
-          dimensions?: Json | null
-          front_image_url?: string | null
           grade?: string | null
+          handover_confirmed?: boolean | null
           id?: string
           image_url?: string | null
-          inner_pages?: Json | null
-          isbn?: string | null
-          metadata_id?: string | null
+          is_available?: boolean
           owner_id: string
-          price?: number | null
+          receiver_id?: string | null
+          status?: string | null
           title: string
           type: Database["public"]["Enums"]["book_type"]
           updated_at?: string
         }
         Update: {
-          ai_extracted_data?: Json | null
-          back_image_url?: string | null
-          binder_image_url?: string | null
           category?: Database["public"]["Enums"]["book_category"]
           condition?: Database["public"]["Enums"]["book_condition"]
           created_at?: string
           description?: string | null
-          dimensions?: Json | null
-          front_image_url?: string | null
           grade?: string | null
+          handover_confirmed?: boolean | null
           id?: string
           image_url?: string | null
-          inner_pages?: Json | null
-          isbn?: string | null
-          metadata_id?: string | null
+          is_available?: boolean
           owner_id?: string
-          price?: number | null
+          receiver_id?: string | null
+          status?: string | null
           title?: string
           type?: Database["public"]["Enums"]["book_type"]
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "books_metadata_id_fkey"
-            columns: ["metadata_id"]
+            foreignKeyName: "books_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
-            referencedRelation: "book_metadata"
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "books_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
-      }
-      bookstore_verifications: {
-        Row: {
-          business_id: string
-          contact_number: string
-          created_at: string | null
-          id: string
-          proof_image_url: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          shop_address: string
-          shop_name: string
-          status: string | null
-          user_id: string
-        }
-        Insert: {
-          business_id: string
-          contact_number: string
-          created_at?: string | null
-          id?: string
-          proof_image_url?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          shop_address: string
-          shop_name: string
-          status?: string | null
-          user_id: string
-        }
-        Update: {
-          business_id?: string
-          contact_number?: string
-          created_at?: string | null
-          id?: string
-          proof_image_url?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          shop_address?: string
-          shop_name?: string
-          status?: string | null
-          user_id?: string
-        }
-        Relationships: []
       }
       chat_messages: {
         Row: {
@@ -241,16 +132,61 @@ export type Database = {
         }
         Relationships: []
       }
+      complaints: {
+        Row: {
+          admin_response: string | null
+          created_at: string | null
+          description: string
+          id: string
+          status: string | null
+          subject: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaints_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           category: Database["public"]["Enums"]["item_category"]
           condition: Database["public"]["Enums"]["book_condition"]
           created_at: string
           description: string | null
+          handover_confirmed: boolean | null
           id: string
           image_url: string | null
+          is_available: boolean
           name: string
           owner_id: string
+          receiver_id: string | null
+          status: string | null
           type: Database["public"]["Enums"]["item_type"]
           updated_at: string
         }
@@ -259,10 +195,14 @@ export type Database = {
           condition: Database["public"]["Enums"]["book_condition"]
           created_at?: string
           description?: string | null
+          handover_confirmed?: boolean | null
           id?: string
           image_url?: string | null
+          is_available?: boolean
           name: string
           owner_id: string
+          receiver_id?: string | null
+          status?: string | null
           type: Database["public"]["Enums"]["item_type"]
           updated_at?: string
         }
@@ -271,41 +211,33 @@ export type Database = {
           condition?: Database["public"]["Enums"]["book_condition"]
           created_at?: string
           description?: string | null
+          handover_confirmed?: boolean | null
           id?: string
           image_url?: string | null
+          is_available?: boolean
           name?: string
           owner_id?: string
+          receiver_id?: string | null
+          status?: string | null
           type?: Database["public"]["Enums"]["item_type"]
           updated_at?: string
         }
-        Relationships: []
-      }
-      messages: {
-        Row: {
-          created_at: string
-          id: string
-          read: boolean
-          receiver_id: string
-          sender_id: string
-          text: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          read?: boolean
-          receiver_id: string
-          sender_id: string
-          text: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          read?: boolean
-          receiver_id?: string
-          sender_id?: string
-          text?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -313,13 +245,9 @@ export type Database = {
           business_id: string | null
           contact_number: string | null
           created_at: string
-          gender: string | null
           id: string
-          latitude: number | null
-          longitude: number | null
           name: string
-          shop_address: string | null
-          shop_name: string | null
+          organization_name: string | null
           user_type: Database["public"]["Enums"]["user_type"]
           verified: boolean | null
         }
@@ -328,13 +256,9 @@ export type Database = {
           business_id?: string | null
           contact_number?: string | null
           created_at?: string
-          gender?: string | null
           id: string
-          latitude?: number | null
-          longitude?: number | null
           name: string
-          shop_address?: string | null
-          shop_name?: string | null
+          organization_name?: string | null
           user_type?: Database["public"]["Enums"]["user_type"]
           verified?: boolean | null
         }
@@ -343,15 +267,160 @@ export type Database = {
           business_id?: string | null
           contact_number?: string | null
           created_at?: string
-          gender?: string | null
           id?: string
-          latitude?: number | null
-          longitude?: number | null
           name?: string
-          shop_address?: string | null
-          shop_name?: string | null
+          organization_name?: string | null
           user_type?: Database["public"]["Enums"]["user_type"]
           verified?: boolean | null
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          book_id: string | null
+          comment: string | null
+          created_at: string
+          id: string
+          item_id: string | null
+          rating: number
+          reviewee_id: string
+          reviewer_id: string
+        }
+        Insert: {
+          book_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          rating: number
+          reviewee_id: string
+          reviewer_id: string
+        }
+        Update: {
+          book_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          rating?: number
+          reviewee_id?: string
+          reviewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewee_id_fkey"
+            columns: ["reviewee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_books: {
+        Row: {
+          book_id: string
+          transaction_id: string
+        }
+        Insert: {
+          book_id: string
+          transaction_id: string
+        }
+        Update: {
+          book_id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_books_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_books_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_items: {
+        Row: {
+          item_id: string
+          transaction_id: string
+        }
+        Insert: {
+          item_id: string
+          transaction_id: string
+        }
+        Update: {
+          item_id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          receiver_id: string
+          resolved_at: string | null
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          receiver_id: string
+          resolved_at?: string | null
+          sender_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          receiver_id?: string
+          resolved_at?: string | null
+          sender_id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -365,6 +434,7 @@ export type Database = {
           receiver_id: string
           sender_id: string
           text: string
+          transaction_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -375,6 +445,7 @@ export type Database = {
           receiver_id: string
           sender_id: string
           text: string
+          transaction_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -385,8 +456,17 @@ export type Database = {
           receiver_id?: string
           sender_id?: string
           text?: string
+          transaction_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_messages_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -407,7 +487,65 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey1"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      welfare_verifications: {
+        Row: {
+          business_id: string
+          contact_number: string
+          created_at: string | null
+          id: string
+          organization_address: string
+          organization_name: string
+          proof_image_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          contact_number: string
+          created_at?: string | null
+          id?: string
+          organization_address: string
+          organization_name: string
+          proof_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          contact_number?: string
+          created_at?: string | null
+          id?: string
+          organization_address?: string
+          organization_name?: string
+          proof_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookstore_verifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -435,7 +573,7 @@ export type Database = {
         | "stationery"
         | "other"
       item_type: "donate" | "exchange"
-      user_type: "user" | "bookstore"
+      user_type: "user" | "bookstore" | "welfare"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -561,6 +699,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "user"],
@@ -576,7 +717,7 @@ export const Constants = {
         "other",
       ],
       item_type: ["donate", "exchange"],
-      user_type: ["user", "bookstore"],
+      user_type: ["user", "bookstore", "welfare"],
     },
   },
 } as const

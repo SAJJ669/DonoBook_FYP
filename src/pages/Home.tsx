@@ -301,6 +301,8 @@ const Home = () => {
           </motion.h1>
           <motion.p variants={fadeUp} transition={{ duration: 0.6, delay: 0.1 }} className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Beyond just books—our platform is a complete ecosystem for school essentials.
+            Whether it's a sturdy backpack, a complete stationary set, or a much-needed textbook,
+            we connect students to ensure no resource goes to waste.
           </motion.p>
           <motion.div variants={fadeUp} transition={{ duration: 0.5, delay: 0.2 }} className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
@@ -331,7 +333,7 @@ const Home = () => {
             { icon: BookOpenText, title: "Academic Gear", desc: "Textbooks, reference guides, and story books.", color: "text-primary" },
             { icon: Backpack, title: "Daily Essentials", desc: "School bags, lunch boxes, and water bottles.", color: "text-secondary" },
             { icon: PencilRuler, title: "Writing & Tools", desc: "Pencil boxes, geometry sets, and calculators.", color: "text-primary" },
-            { icon: ShoppingBag, title: "School Apparel", desc: "School uniforms and required clothing.", color: "text-secondary" }
+            { icon: ShoppingBag, title: "Add-ons", desc: "School uniforms, and other required items.", color: "text-secondary" }
           ].map((cat) => (
             <motion.div key={cat.title} variants={fadeUp} transition={{ duration: 0.5 }}>
               <Card className="hover:shadow-lg transition-all hover:-translate-y-1 h-full">
