@@ -6,10 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Backpack, BookOpen, BookOpenText, Gift, RefreshCw, Package, GraduationCap, PencilRuler, ShoppingBag, Loader2, BadgeCheck, MapPin, X, SlidersHorizontal } from "lucide-react";
+import { 
+  Search, Backpack, BookOpen, BookOpenText, Gift, RefreshCw, 
+  Package, PencilRuler, ShoppingBag, Loader2, BadgeCheck, 
+  MapPin, X, SlidersHorizontal 
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
-import { UserReputation } from '@/components/UserReputation'
+import { UserReputation } from '@/components/UserReputation';
+import { useToast } from "@/hooks/use-toast";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -45,17 +50,16 @@ const staggerContainer = {
   visible: { transition: { staggerChildren: 0.08 } },
 };
 
-// All filter pill definitions
 const CATEGORY_FILTERS = [
-  { value: "books",        label: "All Books",     icon: BookOpen },
-  { value: "textbook",     label: "Textbooks",     icon: BookOpenText },
-  { value: "reading_book", label: "Story Books",   icon: BookOpenText },
-  { value: "items",        label: "All Items",     icon: Package },
-  { value: "bag",          label: "Bags",          icon: Backpack },
-  { value: "stationery",   label: "Stationery",    icon: PencilRuler },
-  { value: "pencil_box",   label: "Pencil Boxes",  icon: PencilRuler },
-  { value: "lunchbox",     label: "Lunchboxes",    icon: ShoppingBag },
-  { value: "water_bottle", label: "Water Bottles", icon: Package },
+  { value: "books",         label: "All Books",     icon: BookOpen },
+  { value: "textbook",      label: "Textbooks",     icon: BookOpenText },
+  { value: "reading_book",  label: "Story Books",   icon: BookOpenText },
+  { value: "items",         label: "All Items",     icon: Package },
+  { value: "bag",           label: "Bags",          icon: Backpack },
+  { value: "stationery",    label: "Stationery",    icon: PencilRuler },
+  { value: "pencil_box",    label: "Pencil Boxes",  icon: PencilRuler },
+  { value: "lunchbox",      label: "Lunchboxes",    icon: ShoppingBag },
+  { value: "water_bottle",  label: "Water Bottles", icon: Package },
 ];
 
 const TYPE_FILTERS = [
@@ -65,6 +69,7 @@ const TYPE_FILTERS = [
 
 const Home = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [books, setBooks] = useState<Book[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,9 +79,10 @@ const Home = () => {
   const [hasMoreItems, setHasMoreItems] = useState(true);
   const [booksOffset, setBooksOffset] = useState(0);
   const [itemsOffset, setItemsOffset] = useState(0);
+  
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const listingsSectionRef = useRef<HTMLElement>(null);
 
-  // Multi-select filter state
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [activeTypes, setActiveTypes] = useState<string[]>([]);
   const [locationQuery, setLocationQuery] = useState("");
@@ -195,48 +201,48 @@ const Home = () => {
 
   const getFilteredListings = () => {
     let listings = getCombinedListings();
-
-    // --- Category filter (multi-select, OR logic within group) ---
     if (activeCategories.length > 0) {
       listings = listings.filter(item => {
         return activeCategories.some(cat => {
           if (cat === "books") return item.itemType === 'book';
           if (cat === "items") return item.itemType === 'item';
-          // specific book categories (textbook, reading_book)
           if (cat === "textbook" || cat === "reading_book") return item.itemType === 'book' && item.category === cat;
-          // specific item categories
           return item.itemType === 'item' && item.category === cat;
         });
       });
     }
-
-    // --- Type filter (donate / exchange) ---
     if (activeTypes.length > 0) {
       listings = listings.filter(item => activeTypes.includes(item.type));
     }
-
-    // --- Location filter (searches owner address) ---
     if (locationQuery.trim()) {
       const loc = locationQuery.toLowerCase();
       listings = listings.filter(item =>
         item.owner?.address?.toLowerCase().includes(loc)
       );
     }
-
-    // --- Search query ---
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       listings = listings.filter(item => item.name.toLowerCase().includes(q));
     }
-
     return listings;
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "donate": return <Gift className="h-4 w-4" />;
-      case "exchange": return <RefreshCw className="h-4 w-4" />;
-      default: return null;
+  const filteredListings = getFilteredListings();
+
+  // --- Search Logic Integration ---
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      if (!searchQuery.trim()) return;
+
+      if (filteredListings.length > 0) {
+        listingsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        toast({
+          title: "No items found",
+          description: `We couldn't find any listings matching "${searchQuery}".`,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -245,6 +251,14 @@ const Home = () => {
       case "donate": return "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800";
       case "exchange": return "bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800";
       default: return "";
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "donate": return <Gift className="h-4 w-4" />;
+      case "exchange": return <RefreshCw className="h-4 w-4" />;
+      default: return null;
     }
   };
 
@@ -261,13 +275,6 @@ const Home = () => {
     navigate(item.itemType === 'book' ? `/book/${item.id}` : `/item/${item.id}`);
   };
 
-  const filteredListings = getFilteredListings();
-  const hasMore = hasMoreBooks || hasMoreItems;
-  
-  // for rendering the listings properly after removing filters
-  const filterKey = [...activeCategories, ...activeTypes, locationQuery, searchQuery].join("|");
-
-
   const getThumbnail = (imageUrl: string | null) => {
     if (!imageUrl) return "/placeholder.svg";
     if (imageUrl.startsWith('[')) {
@@ -278,6 +285,9 @@ const Home = () => {
     }
     return imageUrl;
   };
+
+  const hasMore = hasMoreBooks || hasMoreItems;
+  const filterKey = [...activeCategories, ...activeTypes, locationQuery, searchQuery].join("|");
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-primary-light/20 to-background">
@@ -291,15 +301,16 @@ const Home = () => {
           </motion.h1>
           <motion.p variants={fadeUp} transition={{ duration: 0.6, delay: 0.1 }} className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Beyond just books—our platform is a complete ecosystem for school essentials.
-            Whether it's a sturdy backpack, a complete stationary set, or a much-needed textbook,
-            we connect students to ensure no resource goes to waste.
           </motion.p>
           <motion.div variants={fadeUp} transition={{ duration: 0.5, delay: 0.2 }} className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
-              type="text" placeholder="Search for books or items..."
-              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 h-14 text-lg shadow-card"
+              type="text" 
+              placeholder="Search for books or items and press Enter..."
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyPress}
+              className="pl-12 h-14 text-lg shadow-card focus-visible:ring-primary"
             />
           </motion.div>
           <motion.div variants={fadeUp} transition={{ duration: 0.5, delay: 0.3 }} className="flex gap-4 justify-center pt-4">
@@ -309,7 +320,7 @@ const Home = () => {
         </motion.div>
       </section>
 
-      {/* Categories */}
+      {/* Categories at a Glance */}
       <div className="container mx-auto py-20 px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-heading font-bold mb-4">Categories at a Glance</h2>
@@ -320,10 +331,10 @@ const Home = () => {
             { icon: BookOpenText, title: "Academic Gear", desc: "Textbooks, reference guides, and story books.", color: "text-primary" },
             { icon: Backpack, title: "Daily Essentials", desc: "School bags, lunch boxes, and water bottles.", color: "text-secondary" },
             { icon: PencilRuler, title: "Writing & Tools", desc: "Pencil boxes, geometry sets, and calculators.", color: "text-primary" },
-            { icon: ShoppingBag, title: "School Apparel", desc: "School uniforms, and other required clothing items.", color: "text-secondary" }
+            { icon: ShoppingBag, title: "School Apparel", desc: "School uniforms and required clothing.", color: "text-secondary" }
           ].map((cat) => (
             <motion.div key={cat.title} variants={fadeUp} transition={{ duration: 0.5 }}>
-              <Card className="hover:shadow-lg transition-all hover:-translate-y-1">
+              <Card className="hover:shadow-lg transition-all hover:-translate-y-1 h-full">
                 <CardHeader className="text-center">
                   <cat.icon className={`h-10 w-10 mx-auto mb-4 ${cat.color}`} />
                   <CardTitle>{cat.title}</CardTitle>
@@ -335,64 +346,8 @@ const Home = () => {
         </motion.div>
       </div>
 
-      {/* Mission Section */}
-      <section className="bg-primary/5 py-20">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center gap-12">
-            <div className="md:w-1/2 space-y-6">
-              <h2 className="text-3xl md:text-4xl font-heading font-bold text-primary">Give Every Supply a Second Life</h2>
-              <p className="text-lg text-muted-foreground leading-relaxed italic">
-                "Every semester, millions of stationary items and school bags are discarded while still in perfect condition."
-              </p>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                From high-quality lunch boxes to professional-grade calculators, we help you find what you need and give away what you don't.
-              </p>
-            </div>
-            <div className="md:w-1/2 bg-card p-8 rounded-2xl shadow-xl border-t-4 border-primary">
-              <div className="grid grid-cols-2 gap-4 text-center">
-                {[
-                  { word: "Reduce", sub: "Waste", color: "text-primary" },
-                  { word: "Reuse", sub: "Supplies", color: "text-secondary" },
-                  { word: "Recycle", sub: "Resources", color: "text-primary" },
-                  { word: "Reward", sub: "Community", color: "text-secondary" },
-                ].map((r) => (
-                  <div key={r.word} className="p-4 border rounded-lg">
-                    <span className={`block text-2xl font-bold ${r.color}`}>{r.word}</span>
-                    <span className="text-xs text-muted-foreground uppercase">{r.sub}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How to Participate */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-heading font-bold mb-4">How to Participate</h2>
-          <div className="h-1 w-20 bg-primary mx-auto rounded-full" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-          <Card className="shadow-card hover:shadow-soft transition-smooth">
-            <CardHeader className="text-center">
-              <Gift className="h-12 w-12 mx-auto mb-4 text-primary" />
-              <CardTitle className="font-heading">Donate</CardTitle>
-              <CardDescription>Share items with students who need them</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="shadow-card hover:shadow-soft transition-smooth">
-            <CardHeader className="text-center">
-              <RefreshCw className="h-12 w-12 mx-auto mb-4 text-secondary" />
-              <CardTitle className="font-heading">Exchange</CardTitle>
-              <CardDescription>Swap items with other students</CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </section>
-
-      {/* ── LISTINGS ── */}
-      <section className="container mx-auto px-4 pb-16">
+      {/* Listings Section */}
+      <section ref={listingsSectionRef} className="container mx-auto px-4 pb-16 scroll-mt-20">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-3xl font-heading font-bold">Available Items</h2>
           <Button
@@ -410,7 +365,7 @@ const Home = () => {
           </Button>
         </div>
 
-        {/* ── FILTER PANEL ── */}
+        {/* Filter Panel */}
         <AnimatePresence>
           {showFilters && (
             <motion.div
@@ -422,8 +377,6 @@ const Home = () => {
             >
               <Card className="mb-6 border-primary/20">
                 <CardContent className="pt-5 pb-4 space-y-5">
-
-                  {/* Location filter */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Location</p>
                     <div className="relative max-w-sm">
@@ -442,7 +395,6 @@ const Home = () => {
                     </div>
                   </div>
 
-                  {/* Category pills */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Category</p>
                     <div className="flex flex-wrap gap-2">
@@ -466,96 +418,63 @@ const Home = () => {
                     </div>
                   </div>
 
-                  {/* Type pills */}
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Listing type</p>
-                    <div className="flex gap-2">
-                      {TYPE_FILTERS.map(({ value, label, icon: Icon }) => {
-                        const active = activeTypes.includes(value);
-                        return (
-                          <button
-                            key={value}
-                            onClick={() => toggleType(value)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${
-                              active
-                                ? value === "donate"
-                                  ? "bg-emerald-600 text-white border-emerald-600"
-                                  : "bg-violet-600 text-white border-violet-600"
-                                : "bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground"
-                            }`}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            {label}
-                          </button>
-                        );
-                      })}
+                  <div className="flex items-center justify-between border-t pt-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Listing type</p>
+                      <div className="flex gap-2">
+                        {TYPE_FILTERS.map(({ value, label, icon: Icon }) => {
+                          const active = activeTypes.includes(value);
+                          return (
+                            <button
+                              key={value}
+                              onClick={() => toggleType(value)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${
+                                active
+                                  ? value === "donate"
+                                    ? "bg-emerald-600 text-white border-emerald-600"
+                                    : "bg-violet-600 text-white border-violet-600"
+                                  : "bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground"
+                              }`}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
+                    {activeFilterCount > 0 && (
+                      <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-xs text-muted-foreground hover:text-destructive">
+                        <X className="h-3 w-3 mr-1" /> Clear all
+                      </Button>
+                    )}
                   </div>
-
-                  {/* Clear all */}
-                  {activeFilterCount > 0 && (
-                    <button
-                      onClick={clearAllFilters}
-                      className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
-                    >
-                      <X className="h-3 w-3" /> Clear all filters
-                    </button>
-                  )}
                 </CardContent>
               </Card>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Active filter summary chips (always visible when filters are on) */}
-        {activeFilterCount > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {activeCategories.map(cat => {
-              const label = CATEGORY_FILTERS.find(f => f.value === cat)?.label || cat;
-              return (
-                <span key={cat} className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-xs rounded-full border border-primary/20">
-                  {label}
-                  <button onClick={() => toggleCategory(cat)}><X className="h-3 w-3" /></button>
-                </span>
-              );
-            })}
-            {activeTypes.map(type => {
-              const label = TYPE_FILTERS.find(f => f.value === type)?.label || type;
-              return (
-                <span key={type} className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-xs rounded-full border border-primary/20">
-                  {label}
-                  <button onClick={() => toggleType(type)}><X className="h-3 w-3" /></button>
-                </span>
-              );
-            })}
-            {locationQuery && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary text-xs rounded-full border border-primary/20">
-                <MapPin className="h-3 w-3" />{locationQuery}
-                <button onClick={() => setLocationQuery("")}><X className="h-3 w-3" /></button>
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Results count */}
-        <p className="text-sm text-muted-foreground mb-4">
-          {filteredListings.length} {filteredListings.length === 1 ? "result" : "results"}
-          {activeFilterCount > 0 || searchQuery ? " for current filters" : " available"}
-        </p>
-
+        {/* Results */}
         {loading ? (
-          <div className="text-center py-12"><p className="text-muted-foreground">Loading items...</p></div>
+          <div className="text-center py-20 flex flex-col items-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading the latest contributions...</p>
+          </div>
         ) : filteredListings.length === 0 ? (
           <Card className="shadow-card">
-            <CardContent className="py-12 text-center">
-              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">
-                {searchQuery || activeFilterCount > 0 ? "No items match your current filters." : "No items available yet. Be the first to share!"}
+            <CardContent className="py-20 text-center">
+              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
+              <h3 className="text-xl font-bold mb-2">No matching items</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                {searchQuery 
+                  ? `We couldn't find anything matching "${searchQuery}". Try a different term or browse categories.`
+                  : "No items available in this category yet. Be the first to share something!"}
               </p>
-              {activeFilterCount > 0 && (
-                <Button variant="outline" onClick={clearAllFilters} className="mr-2">Clear Filters</Button>
-              )}
-              <Button onClick={() => navigate("/upload")} className="bg-primary hover:bg-primary-hover">Upload an Item</Button>
+              <div className="flex justify-center gap-3">
+                 <Button variant="outline" onClick={clearAllFilters}>Reset Filters</Button>
+                 <Button onClick={() => navigate("/upload")} className="bg-primary">Upload Item</Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -567,46 +486,45 @@ const Home = () => {
               {filteredListings.map((item) => (
                 <motion.div key={`${item.itemType}-${item.id}`} variants={fadeUp} transition={{ duration: 0.4 }}>
                   <Card
-                    className="shadow-card hover:shadow-soft transition-smooth cursor-pointer group"
+                    className="shadow-card hover:shadow-soft transition-smooth cursor-pointer group h-full flex flex-col"
                     onClick={() => handleItemClick(item)}
                   >
-                    <CardHeader className="p-0">
+                    <CardHeader className="p-0 overflow-hidden rounded-t-lg">
                       <img
                         src={getThumbnail(item.image_url)}
                         alt={item.name}
-                        className="w-full h-48 object-cover rounded-t-lg"
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     </CardHeader>
-                    <CardContent className="p-4">
-                      <CardTitle className="font-heading text-lg mb-2 group-hover:text-primary transition-smooth">{item.name}</CardTitle>
-                      <div className="space-y-2">
-                        {item.itemType === 'book' && item.grade && <p className="text-sm text-muted-foreground">Grade: {item.grade}</p>}
+                    <CardContent className="p-4 flex-1 flex flex-col">
+                      <CardTitle className="font-heading text-lg mb-2 group-hover:text-primary transition-smooth line-clamp-1">
+                        {item.name}
+                      </CardTitle>
+                      
+                      <div className="space-y-3 flex-1">
                         <div className="flex gap-2 flex-wrap">
                           <Badge variant="outline" className={getTypeColor(item.type)}>
                             {getTypeIcon(item.type)}<span className="ml-1 capitalize">{item.type}</span>
                           </Badge>
-                          <Badge variant="outline">{item.condition === "new" ? "New" : "Used"}</Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {item.itemType === 'book'
-                              ? <><BookOpen className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>
-                              : <><Package className="h-3 w-3 mr-1" />{getCategoryLabel(item.category)}</>}
+                          <Badge variant="secondary" className="text-[10px] font-medium">
+                            {getCategoryLabel(item.category)}
                           </Badge>
                         </div>
-                        <div className="pt-2 border-t flex items-center justify-between">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">Posted by</span>
-                            <div className="flex items-center gap-1">
-                              <span className="text-sm font-medium truncate max-w-[100px]">{item.owner?.name || 'User'}</span>
-                              {item.owner?.verified && <BadgeCheck className="h-4 w-4 text-white bg-blue-600 rounded-full" />}
-                            </div>
-                            <div className="flex items-start gap-2">
-                              <MapPin className="h-3 w-3 text-violet-500 mt-0.5" />
-                              <p className="text-[12px] text-muted-foreground">{item.owner?.address}</p>
-                            </div>
+
+                        <div className="pt-3 border-t mt-auto">
+                          <div className="flex items-center justify-between mb-2">
+                             <div className="flex items-center gap-1.5 overflow-hidden">
+                                <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                                   {item.owner?.name?.[0] || 'U'}
+                                </div>
+                                <span className="text-xs font-medium truncate">{item.owner?.name || 'User'}</span>
+                                {item.owner?.verified && <BadgeCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />}
+                             </div>
+                             <UserReputation reviews={item.owner?.received_reviews} />
                           </div>
-                          <div className="flex flex-col items-end">
-                            <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">User Reputation</span>
-                            <UserReputation reviews={item.owner?.received_reviews} />
+                          <div className="flex items-start gap-1.5 opacity-70">
+                            <MapPin className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                            <p className="text-[11px] line-clamp-1">{item.owner?.address || 'Location shared on chat'}</p>
                           </div>
                         </div>
                       </div>
@@ -616,15 +534,19 @@ const Home = () => {
               ))}
             </motion.div>
 
-            <div ref={sentinelRef} className="py-8 text-center">
+            <div ref={sentinelRef} className="py-12 text-center">
               {loadingMore && (
-                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <div className="flex items-center justify-center gap-2 text-primary font-medium">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Loading more...</span>
+                  <span>Checking for more...</span>
                 </div>
               )}
               {!hasMore && filteredListings.length > 0 && (
-                <p className="text-muted-foreground text-sm">You've reached the end</p>
+                <div className="pt-8">
+                  <p className="text-muted-foreground text-sm bg-muted/30 py-2 px-4 rounded-full inline-block">
+                    You've seen everything we have for now! 📚
+                  </p>
+                </div>
               )}
             </div>
           </>
