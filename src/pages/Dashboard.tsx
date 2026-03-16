@@ -483,7 +483,7 @@ const Dashboard = () => {
                 <Card className="shadow-card">
                   <CardContent className="py-12 text-center">
                     <p className="text-muted-foreground mb-4">No items uploaded yet.</p>
-                    <Button onClick={() => navigate("/upload")} className="bg-primary hover:bg-primary-hover">
+                    <Button disabled={isUploadDisabled} onClick={() => navigate("/upload")} className="bg-primary hover:bg-primary-hover">
                       Upload Your First Item
                     </Button>
                   </CardContent>

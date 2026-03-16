@@ -137,7 +137,7 @@ const Assistant = () => {
       // Optimization: Only send the last 10 messages to keep token usage low
       const chatContext = [...messages, userMessage].slice(-10);
 
-      const { data, error } = await supabase.functions.invoke("chat-assistant", {
+      const { data, error } = await supabase.functions.invoke("chat", {
         body: { messages: chatContext },
       });
 

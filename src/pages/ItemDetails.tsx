@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package, MapPin, X } from "lucide-react";
+import { ArrowLeft, MessageSquare, Gift, RefreshCw, Package, MapPin, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 import { Rating } from "@/components/ui/rating";

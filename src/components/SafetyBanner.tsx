@@ -12,18 +12,18 @@ const SafetyBanner = () => {
         <div className="bg-amber-100 p-2 rounded-full shrink-0">
           <ShieldAlert className="size-5 text-amber-700" />
         </div>
-        
+
         <div className="flex-1 space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-amber-900 text-sm">DonoBook Safety Disclaimer</h3>
-            <button 
+            <button
               onClick={() => setIsVisible(false)}
               className="text-amber-500 hover:text-amber-700 transition-colors"
             >
               <X className="size-4" />
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex gap-2">
               <MapPin className="size-4 text-amber-600 shrink-0 mt-0.5" />
@@ -31,18 +31,25 @@ const SafetyBanner = () => {
                 <strong>No Home Addresses:</strong> Meet only in public places (Libraries, Malls, or Cafes).
               </p>
             </div>
-            
+
             <div className="flex gap-2">
               <Phone className="size-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-800 leading-tight">
                 <strong>Phone Numbers:</strong> Share at your own risk. Use the chat for safer record-keeping.
               </p>
             </div>
-            
+
             <div className="flex gap-2">
               <Info className="size-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-800 leading-tight">
-                <strong>Suspicious Behavior?</strong> Please report any users asking for sensitive data.
+                <strong>Suspicious Behavior?</strong> If any user asks for sensitive information (passwords, OTPs, personal data), please report them to the admin immediately.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Info className="size-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800 leading-tight">
+                <strong>Money Requests Warning:</strong> If any user asks you to send money or payment outside the platform, please report them to the admin immediately.
               </p>
             </div>
           </div>
@@ -79,9 +86,9 @@ const HomeSafetyCard = () => (
             </ul>
           </div>
           <div className="flex justify-center">
-             <div className="size-48 bg-blue-600/20 rounded-full flex items-center justify-center border border-blue-500/30">
-                <ShieldAlert className="size-24 text-blue-500 opacity-80" />
-             </div>
+            <div className="size-48 bg-blue-600/20 rounded-full flex items-center justify-center border border-blue-500/30">
+              <ShieldAlert className="size-24 text-blue-500 opacity-80" />
+            </div>
           </div>
         </div>
       </div>
