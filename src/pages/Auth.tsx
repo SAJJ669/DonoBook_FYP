@@ -38,7 +38,7 @@ const Auth = () => {
     // Listen for login/signup events
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
+        if (event === 'SIGNED_IN' && session && !isSignup) {
           navigate("/dashboard");
         }
       }

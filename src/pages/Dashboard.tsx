@@ -28,6 +28,7 @@ const Dashboard = () => {
   const [books, setBooks] = useState<Book[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [verificationStatus, setVerificationStatus] = useState<string | null>(null);
 
@@ -92,6 +93,8 @@ const Dashboard = () => {
 
     } catch (error: any) {
       console.error("Error loading profile:", error.message);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -348,13 +351,24 @@ const Dashboard = () => {
     const labels: Record<string, string> = {
       textbook: "Textbook",
       reading_book: "Reading Book",
-      other_book: "Other Book",  // add this when you add the new enum
+      other_book: "Other Book",
     };
     return labels[category] || category;
   };
 
-  const isUploadDisabled = userProfile?.user_type === "welfare" && verificationStatus === "pending" | "rejected";
+  const isUploadDisabled = userProfile?.user_type === "welfare" &&
+    (verificationStatus === "pending" || verificationStatus === "rejected");
 
+  if (profileLoading || loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Loading your inventory...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -496,7 +510,7 @@ const Dashboard = () => {
                         <img src={getImageUrl(item.image_url)} className={`w-full h-48 object-cover rounded-lg transition-all ${item.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{item.name}</CardTitle>
                         <CardDescription>
-                          {item.category} • {item.condition} • {item.type}
+                          {getCategoryLabel(item.category)} • {item.condition} • {item.type}
                         </CardDescription>
                         <div className="mt-2">
                           <StatusBadge status={item.status} />
