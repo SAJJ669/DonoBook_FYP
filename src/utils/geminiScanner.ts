@@ -13,8 +13,8 @@ export const scanBookImage = async (base64Image: string, mimeType: string) => {
         Return a strictly valid JSON object with these keys:
         {
           "title": "Full book title in English. If the title is in Urdu or Sindhi, romanize it (e.g. 'Urdu Lazmi'). Never use original script.",
-          "grade": "Specific class as 'Class 1' through 'Class 12', or 'None' if not found. Never use roman numerals.",
-          "category": "Specific like 'Textbook' or 'Reading book'",
+          "grade": "Specific class as 'Class 1' through 'Class 12', or write 'None' if not found. Never use roman numerals.",
+          "category": "Determine carefully: Use 'Textbook' ONLY for official school/curriculum books for specific grades. Use 'Story book' for fiction, novels, or children's stories. Use 'Other book' for religious books, philosphy books, journals, guides, or general non-fiction.",
           "condition": "New, Used - Like New, Used - Fair, or Worn",
           "description": "Two-sentence summary"
         }

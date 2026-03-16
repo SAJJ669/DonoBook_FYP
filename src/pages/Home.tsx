@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, Backpack, BookOpen, BookOpenText, Gift, RefreshCw, 
-  Package, PencilRuler, ShoppingBag, Loader2, BadgeCheck, 
-  MapPin, X, SlidersHorizontal 
+import {
+  Search, Backpack, BookOpen, BookOpenText, Gift, RefreshCw,
+  Package, PencilRuler, ShoppingBag, Loader2, BadgeCheck,
+  MapPin, X, SlidersHorizontal
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
@@ -51,19 +51,20 @@ const staggerContainer = {
 };
 
 const CATEGORY_FILTERS = [
-  { value: "books",         label: "All Books",     icon: BookOpen },
-  { value: "textbook",      label: "Textbooks",     icon: BookOpenText },
-  { value: "reading_book",  label: "Story Books",   icon: BookOpenText },
-  { value: "items",         label: "All Items",     icon: Package },
-  { value: "bag",           label: "Bags",          icon: Backpack },
-  { value: "stationery",    label: "Stationery",    icon: PencilRuler },
-  { value: "pencil_box",    label: "Pencil Boxes",  icon: PencilRuler },
-  { value: "lunchbox",      label: "Lunchboxes",    icon: ShoppingBag },
-  { value: "water_bottle",  label: "Water Bottles", icon: Package },
+  { value: "books", label: "All Books", icon: BookOpen },
+  { value: "textbook", label: "Textbooks", icon: BookOpenText },
+  { value: "story_book", label: "Story Books", icon: BookOpenText },
+  { value: "other_book", label: "Other Books", icon: BookOpenText },
+  { value: "items", label: "All Items", icon: Package },
+  { value: "bag", label: "Bags", icon: Backpack },
+  { value: "stationery", label: "Stationery", icon: PencilRuler },
+  { value: "pencil_box", label: "Pencil Boxes", icon: PencilRuler },
+  { value: "lunchbox", label: "Lunchboxes", icon: ShoppingBag },
+  { value: "water_bottle", label: "Water Bottles", icon: Package },
 ];
 
 const TYPE_FILTERS = [
-  { value: "donate",   label: "Donate",   icon: Gift },
+  { value: "donate", label: "Donate", icon: Gift },
   { value: "exchange", label: "Exchange", icon: RefreshCw },
 ];
 
@@ -79,7 +80,7 @@ const Home = () => {
   const [hasMoreItems, setHasMoreItems] = useState(true);
   const [booksOffset, setBooksOffset] = useState(0);
   const [itemsOffset, setItemsOffset] = useState(0);
-  
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const listingsSectionRef = useRef<HTMLElement>(null);
 
@@ -206,7 +207,7 @@ const Home = () => {
         return activeCategories.some(cat => {
           if (cat === "books") return item.itemType === 'book';
           if (cat === "items") return item.itemType === 'item';
-          if (cat === "textbook" || cat === "reading_book") return item.itemType === 'book' && item.category === cat;
+          if (cat === "textbook" || cat === "story_book" || cat === "other_book") return item.itemType === 'book' && item.category === cat;
           return item.itemType === 'item' && item.category === cat;
         });
       });
@@ -266,7 +267,7 @@ const Home = () => {
     const labels: Record<string, string> = {
       bag: "Bag", water_bottle: "Water Bottle", pencil_box: "Pencil Box",
       lunchbox: "Lunchbox", stationery: "Stationery", other: "Other",
-      textbook: "Textbook", reading_book: "Reading Book",
+      textbook: "Textbook", story_book: "Reading Book", other_book: "Other Book"
     };
     return labels[category] || category;
   };
@@ -307,9 +308,9 @@ const Home = () => {
           <motion.div variants={fadeUp} transition={{ duration: 0.5, delay: 0.2 }} className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
             <Input
-              type="text" 
+              type="text"
               placeholder="Search for books or items and press Enter..."
-              value={searchQuery} 
+              value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyPress}
               className="pl-12 h-14 text-lg shadow-card focus-visible:ring-primary"
@@ -330,7 +331,7 @@ const Home = () => {
         </div>
         <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}>
           {[
-            { icon: BookOpenText, title: "Academic Gear", desc: "Textbooks, reference guides, and story books.", color: "text-primary" },
+            { icon: BookOpenText, title: "Academic Gear", desc: "Textbooks, story books, and other educational books.", color: "text-primary" },
             { icon: Backpack, title: "Daily Essentials", desc: "School bags, lunch boxes, and water bottles.", color: "text-secondary" },
             { icon: PencilRuler, title: "Writing & Tools", desc: "Pencil boxes, geometry sets, and calculators.", color: "text-primary" },
             { icon: ShoppingBag, title: "Add-ons", desc: "School uniforms, and other required items.", color: "text-secondary" }
@@ -406,11 +407,10 @@ const Home = () => {
                           <button
                             key={value}
                             onClick={() => toggleCategory(value)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${
-                              active
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${active
                                 ? "bg-primary text-primary-foreground border-primary"
                                 : "bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground"
-                            }`}
+                              }`}
                           >
                             <Icon className="h-3.5 w-3.5" />
                             {label}
@@ -430,13 +430,12 @@ const Home = () => {
                             <button
                               key={value}
                               onClick={() => toggleType(value)}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${
-                                active
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${active
                                   ? value === "donate"
                                     ? "bg-emerald-600 text-white border-emerald-600"
                                     : "bg-violet-600 text-white border-violet-600"
                                   : "bg-background text-muted-foreground border-border hover:border-primary hover:text-foreground"
-                              }`}
+                                }`}
                             >
                               <Icon className="h-3.5 w-3.5" />
                               {label}
@@ -469,13 +468,13 @@ const Home = () => {
               <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-20" />
               <h3 className="text-xl font-bold mb-2">No matching items</h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                {searchQuery 
+                {searchQuery
                   ? `We couldn't find anything matching "${searchQuery}". Try a different term or browse categories.`
                   : "No items available in this category yet. Be the first to share something!"}
               </p>
               <div className="flex justify-center gap-3">
-                 <Button variant="outline" onClick={clearAllFilters}>Reset Filters</Button>
-                 <Button onClick={() => navigate("/upload")} className="bg-primary">Upload Item</Button>
+                <Button variant="outline" onClick={clearAllFilters}>Reset Filters</Button>
+                <Button onClick={() => navigate("/upload")} className="bg-primary">Upload Item</Button>
               </div>
             </CardContent>
           </Card>
@@ -502,7 +501,7 @@ const Home = () => {
                       <CardTitle className="font-heading text-lg mb-2 group-hover:text-primary transition-smooth line-clamp-1">
                         {item.name}
                       </CardTitle>
-                      
+
                       <div className="space-y-3 flex-1">
                         <div className="flex gap-2 flex-wrap">
                           <Badge variant="outline" className={getTypeColor(item.type)}>
@@ -515,14 +514,14 @@ const Home = () => {
 
                         <div className="pt-3 border-t mt-auto">
                           <div className="flex items-center justify-between mb-2">
-                             <div className="flex items-center gap-1.5 overflow-hidden">
-                                <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                                   {item.owner?.name?.[0] || 'U'}
-                                </div>
-                                <span className="text-xs font-medium truncate">{item.owner?.name || 'User'}</span>
-                                {item.owner?.verified && <BadgeCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />}
-                             </div>
-                             <UserReputation reviews={item.owner?.received_reviews} />
+                            <div className="flex items-center gap-1.5 overflow-hidden">
+                              <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
+                                {item.owner?.name?.[0] || 'U'}
+                              </div>
+                              <span className="text-xs font-medium truncate">{item.owner?.name || 'User'}</span>
+                              {item.owner?.verified && <BadgeCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />}
+                            </div>
+                            <UserReputation reviews={item.owner?.received_reviews} />
                           </div>
                           <div className="flex items-start gap-1.5 opacity-70">
                             <MapPin className="h-3 w-3 text-primary mt-0.5 shrink-0" />

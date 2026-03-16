@@ -562,7 +562,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
-      book_category: "textbook" | "reading_book"
+      book_category: "textbook" | "story_book"
       book_condition: "new" | "used"
       book_type: "donate" | "exchange" | "sell"
       item_category:
@@ -705,7 +705,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      book_category: ["textbook", "reading_book"],
+      book_category: ["textbook", "story_book"],
       book_condition: ["new", "used"],
       book_type: ["donate", "exchange", "sell"],
       item_category: [

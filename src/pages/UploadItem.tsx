@@ -97,7 +97,11 @@ const UploadItem = () => {
           title: aiResult.title || prev.title,
           grade: aiResult.grade === "None" ? "" : aiResult.grade,
           // Match the "new" or "used" value expected by your <Select>
-          category: aiResult.category.toLowerCase().includes("textbook") ? "textbook" : "reading_book",
+          category: aiResult.category.toLowerCase().includes("textbook")
+            ? "textbook"
+            : aiResult.category.toLowerCase().includes("other")
+              ? "other_book"
+              : "reading_book",
           condition: aiResult.condition.toLowerCase().includes("new") ? "new" : "used",
           description: aiResult.description || prev.description,
         }));
@@ -179,7 +183,7 @@ const UploadItem = () => {
           {
             title: bookFormData.title,
             grade: bookFormData.grade || null,
-            category: bookFormData.category as "textbook" | "reading_book",
+            category: bookFormData.category as "textbook" | "story_book" | "other_book",
             type: bookFormData.type as "donate" | "exchange",
             condition: bookFormData.condition as "new" | "used",
             description: bookFormData.description || null,
@@ -390,7 +394,8 @@ const UploadItem = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="textbook">Textbook</SelectItem>
-                          <SelectItem value="reading_book">Reading Book</SelectItem>
+                          <SelectItem value="story_book">Story Book</SelectItem>
+                          <SelectItem value="other_book">Other Book</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

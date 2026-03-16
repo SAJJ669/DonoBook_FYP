@@ -259,7 +259,7 @@ const Dashboard = () => {
   const handleConfirmHandover = async (item: any, table: 'books' | 'items') => {
     const { error } = await supabase
       .from(table)
-      .update({ handover_confirmed: true })
+      .update({ handover_confirmed: true, status: 'claimed', is_available: false })
       .eq('id', item.id);
 
     if (error) throw error;
@@ -342,6 +342,15 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      textbook: "Textbook",
+      reading_book: "Reading Book",
+      other_book: "Other Book",  // add this when you add the new enum
+    };
+    return labels[category] || category;
   };
 
   const isUploadDisabled = userProfile?.user_type === "welfare" && verificationStatus === "pending" | "rejected";
@@ -444,7 +453,7 @@ const Dashboard = () => {
                         <img src={getImageUrl(book.image_url)} className={`w-full h-48 object-cover rounded-lg transition-all ${book.status !== "available" ? "grayscale opacity-60" : ""}`} />
                         <CardTitle className="font-heading">{book.title}</CardTitle>
                         <CardDescription>
-                          {book.grade && `Grade: ${book.grade} • `}{book.category} • {book.condition}
+                          {book.grade && `Grade: ${book.grade} • `}{getCategoryLabel(book.category)} • {book.condition}
                         </CardDescription>
                         <div className="mt-2">
                           <StatusBadge status={book.status} />

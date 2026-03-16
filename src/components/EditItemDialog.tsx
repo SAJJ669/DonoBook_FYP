@@ -92,7 +92,7 @@ const EditItemDialog = ({ open, onOpenChange, item, itemType, onSaved }: EditIte
           .update({
             title: formData.title,
             grade: formData.grade || null,
-            category: formData.category as "textbook" | "reading_book",
+            category: formData.category as "textbook" | "story_book" | "other_book",
             type: formData.type as "donate" | "exchange",
             condition: formData.condition as "new" | "used",
             description: formData.description || null,
@@ -159,7 +159,8 @@ const EditItemDialog = ({ open, onOpenChange, item, itemType, onSaved }: EditIte
                   {itemType === 'book' ? (
                     <>
                       <SelectItem value="textbook">Textbook</SelectItem>
-                      <SelectItem value="reading_book">Reading Book</SelectItem>
+                      <SelectItem value="story_book">Story Book</SelectItem>
+                      <SelectItem value="other_book">Other Book</SelectItem>
                     </>
                   ) : (
                     <>
