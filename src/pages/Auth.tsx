@@ -30,7 +30,7 @@ const Auth = () => {
   useEffect(() => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      if (event === 'SIGNED_IN' && session) {
         navigate("/dashboard");
       }
     });
@@ -38,11 +38,14 @@ const Auth = () => {
     // Listen for login/signup events
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (session) {
+        if (event === 'SIGNED_IN' && session) {
           navigate("/dashboard");
         }
       }
     );
+    return () => {
+      listener.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   useEffect(() => {
