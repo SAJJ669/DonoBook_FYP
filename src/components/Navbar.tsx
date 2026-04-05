@@ -57,7 +57,7 @@ const Navbar = ({ userProfile }: { userProfile: any }) => {
 
   const checkAdminRole = async (userId: string) => {
     const { data } = await supabase
-      .from("user_roles")
+      .from("admins")
       .select("role")
       .eq("user_id", userId)
       .eq("role", "admin")
