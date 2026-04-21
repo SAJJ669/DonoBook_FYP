@@ -132,11 +132,15 @@ const Dashboard = () => {
         supabase.from("items").select("*").eq("owner_id", user.id).neq("status", "claimed"),
 
         // 2. Given Away (Owned by me, but status is claimed)
+        supabase.from("books")
+          .select(`*, transaction_books!inner(transactions!inner(status, receiver_id, receiver:profiles!receiver_id(name)))`)
+          .eq("owner_id", user.id)
+          .eq("status", "claimed"),
 
-        /* The profiles!receiver_id(name) syntax tells Supabase: "Look at the receiver_id column, 
-         find that person in the profiles table, and just give me their name." */
-        supabase.from("books").select(`*, receiver:profiles!books_receiver_id_fkey(name)`).eq("owner_id", user.id).eq("status", "claimed"),
-        supabase.from("items").select(`*, receiver:profiles!items_receiver_id_fkey(name)`).eq("owner_id", user.id).eq("status", "claimed"),
+        supabase.from("items")
+          .select(`*, transaction_items!inner(transactions!inner(status, receiver_id, receiver:profiles!receiver_id(name)))`)
+          .eq("owner_id", user.id)
+          .eq("status", "claimed"),
 
         // 3. Received (Owned by others, but receiver_id is me)
         supabase.from("books").select(`*, owner:profiles!books_owner_id_fkey(name), reviews(id)`).eq("receiver_id", user.id),
@@ -145,12 +149,43 @@ const Dashboard = () => {
 
       if (booksRes.error) throw booksRes.error;
       if (itemsRes.error) throw itemsRes.error;
+
+      // 1. Process Given Books
+      const processedGivenBooks = (givenBooksRes.data || []).map((book: any) => {
+        // Look through the 6 offers and find the ONE that was accepted!
+        const winningTx = book.transaction_books?.find(
+          (tb: any) => tb.transactions?.status === 'accepted'
+        );
+
+        const actualReceiverName = winningTx?.transactions?.receiver?.name;
+
+        return {
+          ...book,
+          receiver: { name: actualReceiverName || "Unknown" }
+        };
+      });
+
+      // 2. Process Given Items
+      const processedGivenItems = (givenItemsRes.data || []).map((item: any) => {
+        // Same logic for items
+        const winningTx = item.transaction_items?.find(
+          (ti: any) => ti.transactions?.status === 'accepted'
+        );
+
+        const actualReceiverName = winningTx?.transactions?.receiver?.name;
+
+        return {
+          ...item,
+          receiver: { name: actualReceiverName || "Unknown" }
+        };
+      });
+
       setBooks(booksRes.data || []);
       setItems(itemsRes.data || []);
 
       setGivenAway([
-        ...(givenBooksRes.data || []),
-        ...(givenItemsRes.data || [])
+        ...processedGivenBooks,
+        ...processedGivenItems
       ]);
 
       setReceivedItems([
