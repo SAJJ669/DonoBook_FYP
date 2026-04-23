@@ -126,12 +126,13 @@ const Dashboard = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const [booksRes, itemsRes, givenBooksRes, givenItemsRes, receivedBooksRes, receivedItemsRes] = await Promise.all([
-        // 1. Currently Owned & Available/Pending
+
+      const [booksRes, itemsRes, givenBooksRes, givenItemsRes, receivedBooksRaw, receivedItemsRaw] = await Promise.all([
+        // 1. My active listings
         supabase.from("books").select("*").eq("owner_id", user.id).neq("status", "claimed"),
         supabase.from("items").select("*").eq("owner_id", user.id).neq("status", "claimed"),
 
-        // 2. Given Away (Owned by me, but status is claimed)
+        // 2. Given away (I own, status=claimed) — same query as before, already works
         supabase.from("books")
           .select(`*, transaction_books!inner(transactions!inner(status, receiver_id, receiver:profiles!receiver_id(name)))`)
           .eq("owner_id", user.id)
@@ -142,56 +143,72 @@ const Dashboard = () => {
           .eq("owner_id", user.id)
           .eq("status", "claimed"),
 
-        // 3. Received (Owned by others, but receiver_id is me)
-        supabase.from("books").select(`*, owner:profiles!books_owner_id_fkey(name), reviews(id)`).eq("receiver_id", user.id),
-        supabase.from("items").select(`*, owner:profiles!items_owner_id_fkey(name), reviews(id)`).eq("receiver_id", user.id)
+        // 3. Received — fetch all accepted transactions where I'm the receiver,
+        //    then join back to books
+        supabase.from("transactions")
+          .select(`
+            id,
+            receiver_id,
+            status,
+            transaction_books!inner(
+              books!inner(
+                *,
+                owner:profiles!books_owner_id_fkey(name),
+                reviews(id)
+              )
+            )
+          `)
+          .eq("receiver_id", user.id)
+          .eq("status", "accepted"),
+
+        supabase.from("transactions")
+          .select(`
+            id,
+            receiver_id,
+            status,
+            transaction_items!inner(
+              items!inner(
+                *,
+                owner:profiles!items_owner_id_fkey(name),
+                reviews(id)
+              )
+            )
+          `)
+          .eq("receiver_id", user.id)
+          .eq("status", "accepted"),
       ]);
 
       if (booksRes.error) throw booksRes.error;
       if (itemsRes.error) throw itemsRes.error;
 
-      // 1. Process Given Books
+      // Process given books/items — same logic as before
       const processedGivenBooks = (givenBooksRes.data || []).map((book: any) => {
-        // Look through the 6 offers and find the ONE that was accepted!
         const winningTx = book.transaction_books?.find(
           (tb: any) => tb.transactions?.status === 'accepted'
         );
-
-        const actualReceiverName = winningTx?.transactions?.receiver?.name;
-
-        return {
-          ...book,
-          receiver: { name: actualReceiverName || "Unknown" }
-        };
+        return { ...book, receiver: { name: winningTx?.transactions?.receiver?.name || "Unknown" } };
       });
 
-      // 2. Process Given Items
       const processedGivenItems = (givenItemsRes.data || []).map((item: any) => {
-        // Same logic for items
         const winningTx = item.transaction_items?.find(
           (ti: any) => ti.transactions?.status === 'accepted'
         );
-
-        const actualReceiverName = winningTx?.transactions?.receiver?.name;
-
-        return {
-          ...item,
-          receiver: { name: actualReceiverName || "Unknown" }
-        };
+        return { ...item, receiver: { name: winningTx?.transactions?.receiver?.name || "Unknown" } };
       });
+
+      // Flatten received books/items out of the transactions wrapper
+      const receivedBooks = (receivedBooksRaw.data || []).flatMap((tx: any) =>
+        (tx.transaction_books || []).map((tb: any) => tb.books)
+      ).filter(Boolean);
+
+      const receivedItems = (receivedItemsRaw.data || []).flatMap((tx: any) =>
+        (tx.transaction_items || []).map((ti: any) => ti.items)
+      ).filter(Boolean);
 
       setBooks(booksRes.data || []);
       setItems(itemsRes.data || []);
-
-      setGivenAway([
-        ...processedGivenBooks,
-        ...processedGivenItems
-      ]);
-
-      setReceivedItems([
-        ...(receivedBooksRes.data || []),
-        ...(receivedItemsRes.data || [])
-      ]);
+      setGivenAway([...processedGivenBooks, ...processedGivenItems]);
+      setReceivedItems([...receivedBooks, ...receivedItems]);
 
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to load";

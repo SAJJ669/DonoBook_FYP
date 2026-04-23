@@ -416,7 +416,6 @@ const Messages = () => {
         const { error } = await supabase.from("books").update({
           status: accept ? "claimed" : "available",
           is_available: !accept,
-          receiver_id: accept ? message.receiver_id : null,
         }).in("id", bookIds);
       }
 
@@ -425,7 +424,6 @@ const Messages = () => {
         await supabase.from("items").update({
           status: accept ? "claimed" : "available",
           is_available: !accept,
-          receiver_id: accept ? message.receiver_id : null,
         }).in("id", itemIds);
       }
 
