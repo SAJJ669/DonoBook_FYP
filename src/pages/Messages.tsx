@@ -129,37 +129,40 @@ const Messages = () => {
   const fetchMessages = async () => {
     if (!currentUserId || !otherUserId) return;
 
-    const { data, error } = await supabase
-      .from("user_messages")
-      .select("*")
-      .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`)
-      .order("created_at", { ascending: true });
-
-    if (error) { console.error("Error fetching messages:", error); return; }
-    setMessages(data || []);
-
-    // After loading messages, find all transaction_ids so we can
-    // fetch their current statuses from the transactions table.
-    // We can't store status in user_messages anymore since we removed
-    // the transaction_status column.
-    const txIds = (data || [])
-      .filter(m => m.transaction_id)
-      .map(m => m.transaction_id as string);
-
-    if (txIds.length > 0) {
-      const { data: txData } = await supabase
+    // 1. Fetch messages and transactions in parallel
+    const [messagesRes, transactionsRes] = await Promise.all([
+      supabase
+        .from("user_messages")
+        .select("*")
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`)
+        .order("created_at", { ascending: true }),
+      supabase
         .from("transactions")
-        .select("id, status")
-        .in("id", txIds);
+        .select("*")
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${currentUserId})`)
+    ]);
 
-      // Build a lookup map: { [transaction_id]: status }
-      const statusMap = (txData || []).reduce((acc, tx) => ({
-        ...acc,
-        [tx.id]: tx.status
-      }), {} as Record<string, string>);
+    if (messagesRes.error) return;
 
-      setTransactionStatuses(statusMap);
-    }
+    const allTx = transactionsRes.data || [];
+
+    // 2. Map transactions to messages using the message_id (NO TIMING NEEDED)
+    const enrichedMessages = (messagesRes.data || []).map((msg) => {
+      const linkedTx = allTx.find(tx => tx.message_id === msg.id);
+      return {
+        ...msg,
+        transaction_id: linkedTx ? linkedTx.id : null // We keep the property for your UI logic
+      };
+    });
+
+    setMessages(enrichedMessages);
+
+    // 3. Update status map
+    const statusMap = allTx.reduce((acc, tx) => ({
+      ...acc, [tx.id]: tx.status
+    }), {} as Record<string, string>);
+
+    setTransactionStatuses(statusMap);
   };
 
   const markMessagesAsRead = async () => {
@@ -174,36 +177,44 @@ const Messages = () => {
   };
 
   const subscribeToMessages = () => {
-    // Realtime subscription — fires whenever a new message is inserted.
-    // We filter client-side to only add messages that belong to THIS conversation.
     const channel = supabase
       .channel(`user_messages-${currentUserId}-${otherUserId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_messages' },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as Message;
+
+          // Ensure this message belongs to the active conversation
           if (
             (newMsg.sender_id === currentUserId && newMsg.receiver_id === otherUserId) ||
             (newMsg.sender_id === otherUserId && newMsg.receiver_id === currentUserId)
           ) {
-            setMessages((prev) => [...prev, newMsg]);
 
-            // BUG FIX 2: When a new offer message arrives via realtime,
-            // its transaction_id exists but transactionStatuses won't have
-            // it yet. We need to fetch and add it to the status map.
-            if (newMsg.transaction_id) {
-              supabase
-                .from("transactions")
-                .select("id, status")
-                .eq("id", newMsg.transaction_id)
-                .single()
-                .then(({ data }) => {
-                  if (data) {
-                    setTransactionStatuses(prev => ({
-                      ...prev,
-                      [data.id]: data.status
-                    }));
-                  }
-                });
+            // Check if there is a transaction pointing to this new message
+            const { data: txData } = await supabase
+              .from("transactions")
+              .select("id, status")
+              .eq("message_id", newMsg.id)
+              .maybeSingle();
+
+            // We append `transaction_id` here purely for React state handling
+            const enrichedMsg = {
+              ...newMsg,
+              transaction_id: txData ? txData.id : null
+            };
+
+            setMessages((prev) => {
+              // Check if we already have this message (e.g., added by sendOffer)
+              const exists = prev.some(m => m.id === enrichedMsg.id);
+              if (exists) return prev; // If it exists, don't change anything
+              return [...prev, enrichedMsg]; // Otherwise, add it
+            });
+
+            // If it was a transaction, update our status state as well
+            if (txData) {
+              setTransactionStatuses(prev => ({
+                ...prev,
+                [txData.id]: txData.status
+              }));
             }
           }
         }
@@ -314,17 +325,42 @@ const Messages = () => {
     if (selectedBooks.length === 0 && selectedItems.length === 0) return;
 
     try {
-      // Step 1: Create a transaction record first.
-      // This is the "source of truth" for the offer's status.
+      // 1. Build the human-readable message text first
+      const bookTitles = userBooks.filter(b => selectedBooks.includes(b.id)).map(b => b.title);
+      const itemNames = userItems.filter(i => selectedItems.includes(i.id)).map(i => i.name);
+      const allNames = [...bookTitles, ...itemNames];
+      const messageText = allNames.length > 1
+        ? `I have a bundle offer: ${allNames.join(", ")}. Would you like to accept?`
+        : `I would like to offer: "${allNames[0]}". Do you accept?`;
+
+      // 2. Send the chat message FIRST (notice transaction_id is removed here)
+      const { data: newMsg, error: msgError } = await supabase
+        .from("user_messages")
+        .insert({
+          sender_id: currentUserId,
+          receiver_id: otherUserId,
+          text: messageText
+        })
+        .select()
+        .single();
+
+      if (msgError) throw msgError;
+
+      // 3. Create the transaction record, linking it to the message we just created!
       const { data: transaction, error: txError } = await supabase
         .from("transactions")
-        .insert({ sender_id: currentUserId, receiver_id: otherUserId, status: "pending" })
+        .insert({
+          sender_id: currentUserId,
+          receiver_id: otherUserId,
+          status: "pending",
+          message_id: newMsg.id // <--- This links the transaction to the message
+        })
         .select()
         .single();
 
       if (txError) throw txError;
 
-      // Step 2: Insert selected books into junction table
+      // 4. Insert selected books into junction table
       if (selectedBooks.length > 0) {
         const { error } = await supabase
           .from("transaction_books")
@@ -332,7 +368,7 @@ const Messages = () => {
         if (error) throw error;
       }
 
-      // Step 3: Insert selected items into junction table
+      // 5. Insert selected items into junction table
       if (selectedItems.length > 0) {
         const { error } = await supabase
           .from("transaction_items")
@@ -340,8 +376,7 @@ const Messages = () => {
         if (error) throw error;
       }
 
-      // Step 4: Mark all selected books/items as pending so they
-      // don't show up as available for other users while offer is open
+      // 6. Mark all selected books/items as pending
       if (selectedBooks.length > 0) {
         await supabase.from("books")
           .update({ status: "pending", is_available: false })
@@ -353,23 +388,21 @@ const Messages = () => {
           .in("id", selectedItems);
       }
 
-      // Step 5: Build a human-readable message text for the chat
-      const bookTitles = userBooks.filter(b => selectedBooks.includes(b.id)).map(b => b.title);
-      const itemNames = userItems.filter(i => selectedItems.includes(i.id)).map(i => i.name);
-      const allNames = [...bookTitles, ...itemNames];
-      const messageText = allNames.length > 1
-        ? `I have a bundle offer: ${allNames.join(", ")}. Would you like to accept?`
-        : `I would like to offer: "${allNames[0]}". Do you accept?`;
-
-      // Step 6: Send the chat message linked to the transaction via transaction_id
-      const { error: msgError } = await supabase
-        .from("user_messages")
-        .insert({ sender_id: currentUserId, receiver_id: otherUserId, text: messageText, transaction_id: transaction.id });
-
-      if (msgError) throw msgError;
-
-      // Step 7: Immediately update local transactionStatuses so the
-      // sender sees "Waiting for response..." without needing a re-fetch
+      // 7. Update local state. We "pretend" the message has transaction_id on the frontend
+      // so that your existing UI rendering code doesn't break!
+      // 7. Update local state safely
+      setMessages((prev) => {
+        // Check if the Realtime listener already added this message
+        if (prev.some(m => m.id === newMsg.id)) {
+          // If it exists, update the transaction_id on the existing message
+          return prev.map(m => m.id === newMsg.id
+            ? { ...m, transaction_id: transaction.id }
+            : m
+          );
+        }
+        // If it doesn't exist yet, add it
+        return [...prev, { ...newMsg, transaction_id: transaction.id }];
+      });
       setTransactionStatuses(prev => ({ ...prev, [transaction.id]: "pending" }));
 
       toast({ title: "Offer Sent!", description: `Offered ${allNames.length} item(s).` });
