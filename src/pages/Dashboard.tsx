@@ -159,7 +159,7 @@ const Dashboard = () => {
             )
           `)
           .eq("receiver_id", user.id)
-          .eq("status", "accepted"),
+          .eq("status", "successful"),
 
         supabase.from("transactions")
           .select(`
@@ -175,25 +175,34 @@ const Dashboard = () => {
             )
           `)
           .eq("receiver_id", user.id)
-          .eq("status", "accepted"),
+          .eq("status", "successful"),
       ]);
 
       if (booksRes.error) throw booksRes.error;
       if (itemsRes.error) throw itemsRes.error;
 
-      // Process given books/items — same logic as before
+      // 1. Update processedGivenBooks
       const processedGivenBooks = (givenBooksRes.data || []).map((book: any) => {
         const winningTx = book.transaction_books?.find(
-          (tb: any) => tb.transactions?.status === 'accepted'
+          (tb: any) =>
+            tb.transactions?.status === 'accepted' || tb.transactions?.status === 'successful'
         );
-        return { ...book, receiver: { name: winningTx?.transactions?.receiver?.name || "Unknown" } };
+        return {
+          ...book,
+          receiver: { name: winningTx?.transactions?.receiver?.name || "Unknown" }
+        };
       });
 
+      // 2. Update processedGivenItems
       const processedGivenItems = (givenItemsRes.data || []).map((item: any) => {
         const winningTx = item.transaction_items?.find(
-          (ti: any) => ti.transactions?.status === 'accepted'
+          (ti: any) =>
+            ti.transactions?.status === 'accepted' || ti.transactions?.status === 'successful'
         );
-        return { ...item, receiver: { name: winningTx?.transactions?.receiver?.name || "Unknown" } };
+        return {
+          ...item,
+          receiver: { name: winningTx?.transactions?.receiver?.name || "Unknown" }
+        };
       });
 
       // Flatten received books/items out of the transactions wrapper
@@ -312,12 +321,41 @@ const Dashboard = () => {
   };
 
   const handleConfirmHandover = async (item: any, table: 'books' | 'items') => {
-    const { error } = await supabase
+    const { error: listingError } = await supabase
       .from(table)
-      .update({ handover_confirmed: true, status: 'claimed', is_available: false })
+      .update({
+        handover_confirmed: true,
+        status: 'claimed',
+        is_available: false
+      })
       .eq('id', item.id);
 
-    if (error) throw error;
+    if (listingError) throw listingError;
+
+    // 2. Find the Transaction ID via the mapping table
+    // If it's a book, look in 'transaction_books'. If an item, 'transaction_items'.
+    const mappingTable = table === 'books' ? 'transaction_books' : 'transaction_items';
+    const foreignKeyColumn = table === 'books' ? 'book_id' : 'item_id';
+
+    const { data: mappingData, error: mappingError } = await supabase
+      .from(mappingTable)
+      .select('transaction_id')
+      .eq(foreignKeyColumn, item.id)
+      .maybeSingle(); // Gets the specific transaction linked to this item
+
+    if (mappingError) throw mappingError;
+
+    // 3. Update the Transaction Status using the ID we just found
+    if (mappingData?.transaction_id) {
+      const { error: txUpdateError } = await supabase
+        .from("transactions")
+        .update({ status: "successful" })
+        .eq('id', mappingData.transaction_id);
+
+      if (txUpdateError) throw txUpdateError;
+    } else {
+      console.warn("No linked transaction found for this item.");
+    }
 
     toast({
       title: "Handover Confirmed!",
