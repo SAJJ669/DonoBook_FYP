@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import SafetyBanner from "@/components/SafetyBanner";
+import SafetyBanner from "@/components/SafetyBanner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +74,10 @@ const Messages = () => {
   const [donateSelectedBooks, setDonateSelectedBooks] = useState<string[]>([]);
   const [donateSelectedItems, setDonateSelectedItems] = useState<string[]>([]);
 
+  // Safety Banner States
+  const [showSafetyBanner, setShowSafetyBanner] = useState(false);
+  const [dontShowFor7Days, setDontShowFor7Days] = useState(false);
+
   // Exchange selections
   const [exchangeTab, setExchangeTab] = useState<'books' | 'items'>('books');
   const [exchangeInventoryView, setExchangeInventoryView] = useState<'mine' | 'theirs'>('mine');
@@ -93,6 +98,36 @@ const Messages = () => {
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
   useEffect(() => { setTimeout(scrollToBottom, 100); }, [messages]);
+
+  // Handle Safety Banner Local Storage Logic
+  useEffect(() => {
+    const lastDismissed = localStorage.getItem('safetyBannerDismissedAt');
+    if (lastDismissed) {
+      const dismissedDate = new Date(lastDismissed);
+      const now = new Date();
+      // Calculate diff in days
+      const daysSince = (now.getTime() - dismissedDate.getTime()) / (1000 * 3600 * 24);
+      
+      if (daysSince >= 7) {
+        setShowSafetyBanner(true); // 7 days have passed, show it again
+      } else {
+        setShowSafetyBanner(false); // Within 7 days, keep it hidden
+      }
+    } else {
+      setShowSafetyBanner(true); // No record found, show it by default
+    }
+  }, []);
+
+  const handleDismissBanner = () => {
+    if (dontShowFor7Days) {
+      // User checked the box, save the current date
+      localStorage.setItem('safetyBannerDismissedAt', new Date().toISOString());
+    } else {
+      // User didn't check the box, ensure it shows up next time
+      localStorage.removeItem('safetyBannerDismissedAt');
+    }
+    setShowSafetyBanner(false);
+  };
 
   useMessageNotifications({ currentUserId, onNewMessage: markMessagesAsRead });
 
@@ -238,6 +273,7 @@ const Messages = () => {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_messages' },
         async (payload) => {
           const newMsg = payload.new as Message;
+
           if (
             (newMsg.sender_id === currentUserId && newMsg.receiver_id === otherUserId) ||
             (newMsg.sender_id === otherUserId && newMsg.receiver_id === currentUserId)
@@ -559,8 +595,11 @@ const Messages = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
-          <Card className="shadow-card max-w-2xl mx-auto">
-            <CardHeader><CardTitle>Start a chat</CardTitle></CardHeader>
+          <Card className="shadow-sm border-border max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="font-heading">Messages</CardTitle>
+              <p className="text-muted-foreground text-sm">Select a user to start chatting</p>
+            </CardHeader>
             <CardContent className="p-4 space-y-2">
               {users.length > 0 ? users.map(user => (
                 <Button key={user.id} onClick={() => navigate(`/messages?userId=${user.id}`)} className="w-full text-left">
@@ -576,18 +615,27 @@ const Messages = () => {
 
   // ─── CHAT VIEW ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative bg-muted/20">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <Card className="shadow-card max-w-4xl mx-auto">
-          <CardHeader className="border-b">
-            <CardTitle className="font-heading">Chat with {otherUser?.name || "User"}</CardTitle>
+      <div className="container mx-auto px-4 py-6">
+        <Card className="shadow-md border-border max-w-4xl mx-auto overflow-hidden flex flex-col h-[75vh]">
+          {/* Chat Header */}
+          <CardHeader className="border-b bg-background px-6 py-4 shrink-0 shadow-sm z-10">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                {otherUser?.name ? otherUser.name.charAt(0).toUpperCase() : "U"}
+              </div>
+              <div>
+                <CardTitle className="font-heading text-lg">{otherUser?.name || "User"}</CardTitle>
+                {otherUserTyping && <p className="text-xs text-primary animate-pulse">Typing...</p>}
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="p-0">
 
-            {/* Messages list */}
-            <div className="h-96 overflow-y-auto p-4 space-y-4">
-              {messages.map(message => {
+          {/* Chat Messages Area */}
+          <CardContent className="p-0 flex-1 overflow-y-auto bg-slate-50/50 dark:bg-background relative">
+            <div className="p-4 sm:p-6 space-y-6">
+              {messages.map((message) => {
                 const isSentByUser = message.sender_id === currentUserId;
                 const isEditing = editingMessageId === message.id;
                 const txStatus = message.transaction_id
@@ -597,28 +645,47 @@ const Messages = () => {
 
                 return (
                   <div key={message.id} className={`flex ${isSentByUser ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-xs group relative ${isSentByUser ? "bg-primary text-primary-foreground" : "bg-muted"} px-4 py-2 rounded-lg`}>
+                    <div className={`max-w-[85%] sm:max-w-md group relative px-4 py-3 shadow-sm ${
+                      isSentByUser 
+                        ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm" 
+                        : "bg-background border border-border text-foreground rounded-2xl rounded-tl-sm"
+                    }`}>
+                      
                       {isEditing ? (
-                        <div className="space-y-2">
-                          <Input value={editedText} onChange={e => setEditedText(e.target.value)} className="text-sm" autoFocus />
+                        <div className="space-y-3 min-w-[200px]">
+                          <Input 
+                            value={editedText} 
+                            onChange={(e) => setEditedText(e.target.value)} 
+                            className={`text-sm h-9 ${isSentByUser ? 'bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/50' : ''}`} 
+                            autoFocus 
+                          />
                           <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="ghost" onClick={cancelEdit} className="h-6 px-2"><X className="h-3 w-3" /></Button>
-                            <Button size="sm" onClick={() => saveEdit(message.id, message.text)} className="h-6 px-2"><Check className="h-3 w-3" /></Button>
+                            <Button size="sm" variant="ghost" onClick={cancelEdit} className={`h-7 px-3 ${isSentByUser ? 'hover:bg-primary-foreground/20 hover:text-primary-foreground text-primary-foreground' : ''}`}><X className="h-3 w-3 mr-1" /> Cancel</Button>
+                            <Button size="sm" onClick={() => saveEdit(message.id, message.text)} className={`h-7 px-3 ${isSentByUser ? 'bg-primary-foreground text-primary hover:bg-primary-foreground/90' : ''}`}><Check className="h-3 w-3 mr-1" /> Save</Button>
                           </div>
                         </div>
                       ) : (
                         <>
-                          <p>{message.text}</p>
-                          {message.edited_at && <p className="text-xs opacity-60 italic mt-1">(edited)</p>}
-                          <div className="flex items-center justify-between mt-1">
-                            <p className="text-xs opacity-70">{new Date(message.created_at || "").toLocaleTimeString()}</p>
-                            {isSentByUser && <p className="text-xs opacity-70 ml-2">{message.read ? "✓✓" : "✓"}</p>}
+                          <p className="text-[15px] leading-relaxed break-words">{message.text}</p>
+                          
+                          <div className={`flex items-center justify-end mt-1.5 gap-2 text-[11px] font-medium ${isSentByUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                            {message.edited_at && <span className="italic">(edited)</span>}
+                            <span>{new Date(message.created_at || "").toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            {isSentByUser && (
+                              <span>{message.read ? <span className="text-blue-200">✓✓</span> : "✓"}</span>
+                            )}
                           </div>
 
                           {/* Transaction card */}
                           {!!message.transaction_id && (
-                            <div className="mt-3 p-3 border rounded-md bg-background/20 text-foreground space-y-2">
-                              <p className="font-semibold text-sm">Transaction Proposal</p>
+                            <div className={`mt-3 p-3.5 rounded-xl border ${
+                              isSentByUser 
+                                ? 'bg-primary-foreground/10 border-primary-foreground/20' 
+                                : 'bg-muted/50 border-border'
+                            } space-y-3`}>
+                              <p className="font-semibold text-sm flex items-center gap-2">
+                                <Package className="h-4 w-4" /> Transaction Proposal
+                              </p>
 
                               {/* Countdown timer */}
                               {isPending && timeLeft && (
@@ -630,9 +697,9 @@ const Messages = () => {
 
                               {isPending ? (
                                 !isSentByUser ? (
-                                  <div className="flex gap-2 flex-wrap">
-                                    <Button size="sm" className="bg-green-600 hover:bg-green-700 h-8 text-white" onClick={() => handleTransaction(message, true)}>Accept</Button>
-                                    <Button size="sm" variant="destructive" className="h-8" onClick={() => handleTransaction(message, false)}>Decline</Button>
+                                  <div className="flex gap-2 pt-1">
+                                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 h-8 flex-1 text-white shadow-sm" onClick={() => handleTransaction(message, true)}>Accept</Button>
+                                    <Button size="sm" variant="destructive" className="h-8 flex-1 shadow-sm" onClick={() => handleTransaction(message, false)}>Decline</Button>
                                   </div>
                                 ) : (
                                   <div className="space-y-1">
@@ -653,14 +720,14 @@ const Messages = () => {
                         </>
                       )}
 
-                      {/* Edit / Delete on hover */}
+                      {/* Edit/Delete Actions overlaying the bubble on hover */}
                       {isSentByUser && !isEditing && (
-                        <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                          <Button size="sm" variant="ghost" onClick={() => startEditMessage(message)} className="h-8 w-8 p-0 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-200 hover:text-blue-700">
-                            <Edit2 className="h-3 w-3" />
+                        <div className="absolute -left-20 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 flex gap-1 bg-background p-1 rounded-full shadow-sm border border-border">
+                          <Button size="icon" variant="ghost" onClick={() => startEditMessage(message)} className="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 rounded-full">
+                            <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setDeletingMessageId(message.id)} className="h-8 w-8 p-0 text-destructive bg-red-50 hover:bg-red-200 hover:text-destructive">
-                            <Trash2 className="h-3 w-3" />
+                          <Button size="icon" variant="ghost" onClick={() => setDeletingMessageId(message.id)} className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-red-50 rounded-full">
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       )}
@@ -688,10 +755,8 @@ const Messages = () => {
               <Input type="text" value={newMessage} onChange={e => handleTyping(e.target.value)} placeholder="Type your message…" className="flex-1" />
               <Button type="submit"><Send className="h-4 w-4" /></Button>
             </form>
-          </CardContent>
+          </div>
         </Card>
-
-        <div className="max-w-4xl mx-auto mt-4"><SafetyBanner /></div>
 
         {/* ── Delete confirmation ── */}
         <AlertDialog open={!!deletingMessageId} onOpenChange={() => setDeletingMessageId(null)}>
@@ -941,6 +1006,54 @@ const Messages = () => {
         </AlertDialog>
 
       </div>
+
+      {/* 
+        ================================================================
+        CUSTOM CENTERED MODAL FOR SAFETY BANNER
+        ================================================================
+      */}
+      {showSafetyBanner && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="relative w-full max-w-2xl bg-background rounded-2xl shadow-2xl overflow-hidden border border-border animate-in zoom-in-95 duration-200">
+            
+            {/* Header Area */}
+            <div className="bg-primary/5 px-6 py-4 border-b border-border flex justify-between items-center">
+              <h3 className="font-heading font-bold text-lg text-foreground">Safety Notice</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted"
+                onClick={() => setShowSafetyBanner(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Content Area */}
+            <div className="p-6">
+              <SafetyBanner />
+              
+              <div className="mt-6 flex flex-col gap-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={dontShowFor7Days}
+                    onChange={(e) => setDontShowFor7Days(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  Don't show this again for 7 days
+                </label>
+                <Button
+                  className="w-full h-11 font-medium"
+                  onClick={handleDismissBanner}
+                >
+                  Continue to Chat
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
