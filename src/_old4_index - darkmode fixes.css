@@ -23,7 +23,7 @@
     --primary-foreground:    0   0%  100%;
     --primary-hover:         248 78% 50%;
     --primary-light:         248 60% 93%;
-    --primary-glow:          248 75% 58% / 0.20;
+    --primary-glow:          248 75% 58% / 0.25;
 
     /* ── Blue secondary (#537eee family) ────────────────── */
     --secondary:             219 78% 63%;      /* #537eee */
@@ -50,10 +50,10 @@
     --gradient-card:         linear-gradient(180deg, hsl(0 0% 100%), hsl(248 30% 98%));
     --gradient-brand:        linear-gradient(135deg, hsl(253 72% 54%), hsl(219 81% 63%));
 
-    /* ── Shadows (Softened for Light Mode) ───────────────── */
-    --shadow-soft:           0 4px 20px -4px hsl(248 50% 60% / 0.10);
-    --shadow-card:           0 2px 12px -2px hsl(248 40% 55% / 0.08);
-    --shadow-glow:           0 0 32px -4px hsl(248 75% 58% / 0.25);
+    /* ── Shadows ─────────────────────────────────────────── */
+    --shadow-soft:           0 4px 20px -4px hsl(248 50% 60% / 0.18);
+    --shadow-card:           0 2px 12px -2px hsl(248 40% 55% / 0.12);
+    --shadow-glow:           0 0 32px -4px hsl(248 75% 58% / 0.30);
 
     /* ── Transitions ─────────────────────────────────────── */
     --transition-smooth:     all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
