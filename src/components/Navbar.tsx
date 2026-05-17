@@ -162,6 +162,7 @@ const Navbar = ({ userProfile: propUserProfile }: { userProfile?: any }) => {
         description: "Logged out successfully",
       });
       navigate("/");
+      window.location.reload();
     }
   };
 
