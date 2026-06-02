@@ -56,7 +56,9 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: [
       'minds-hidden-item-rom.trycloudflare.com',
       'reviews-firewall-preview-logo.trycloudflare.com',
-      'tribunal-rapids-which-deaths.trycloudflare.com'
+      'tribunal-rapids-which-deaths.trycloudflare.com',
+      'possibility-routine-instant-interim.trycloudflare.com',
+      'abraham-acre-seminars-skilled.trycloudflare.com',
     ]
   }
 }));
