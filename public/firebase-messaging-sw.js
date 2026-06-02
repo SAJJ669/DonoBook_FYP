@@ -22,7 +22,7 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.body || 'You received a message.',
-    icon: '/logo-192x192.png' // Points to your PWA icon
+    icon: '/logo-192x192.png', // Points to your PWA icon
     badge: '/logo-192x192.png',
     tag: 'chat-message', // Prevents flooding by stacking notifications
     renotify: true,
