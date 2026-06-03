@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [react(),
   VitePWA({
+    strategies: 'injectManifest', // Use this if you have a custom service worker
+    srcDir: 'public',
+    filename: 'firebase-messaging-sw.js',
     registerType: 'autoUpdate', // Automatically refreshes the app when updates are deployed
     includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
     manifest: {
