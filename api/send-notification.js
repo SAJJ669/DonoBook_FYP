@@ -1,8 +1,8 @@
-import { initializeApp, cert, apps } from 'firebase-admin/app';
+import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 
 // Initialize Firebase Admin dynamically
-if (!apps.length) {
+if (!getApps.length) {
   initializeApp({
     credential: cert({
       projectId: process.env.VITE_FIREBASE_PROJECT_ID,
