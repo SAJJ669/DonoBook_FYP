@@ -13,7 +13,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ReviewModal } from "@/components/ReviewModal";
 import ComplaintsTab from "@/components/ComplaintsTab";
 import EditProfile from "@/components/EditProfile";
-import { requestNotificationPermission } from "@/utils/notificationSetup";
+import { requestNotificationPermission, setupForegroundMessageListener } from "@/utils/notificationSetup";
 
 type Book = Database['public']['Tables']['books']['Row'];
 type Item = Database['public']['Tables']['items']['Row'];
@@ -52,6 +52,27 @@ const Dashboard = () => {
     fetchUserProfile();
     fetchUserListings();
   }, []);
+
+  useEffect(() => {
+    if (!userProfile?.id) return; // Wait until the profile and user ID are loaded
+
+    const handleNotificationsInit = async () => {
+      // 1. Listen for foreground alerts while app is open
+      setupForegroundMessageListener();
+
+      // 2. Grab the fresh token silently and update Supabase if it changed
+      const freshToken = await requestNotificationPermission(userProfile.id);
+      if (freshToken) {
+        console.log("FCM Token synchronized on boot.");
+        await supabase
+          .from('profiles')
+          .update({ fcm_token: freshToken })
+          .eq('id', userProfile.id);
+      }
+    };
+
+    handleNotificationsInit();
+  }, [userProfile?.id]); // Fires automatically as soon as userProfile is resolved
 
   const fetchUserProfile = async () => {
     try {

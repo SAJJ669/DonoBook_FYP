@@ -1,3 +1,4 @@
+// src/notificationSetup.ts
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
@@ -15,40 +16,49 @@ const messaging = getMessaging(app);
 
 export const requestNotificationPermission = async (userId: string): Promise<string | null> => {
   try {
-    const permission = await Notification.requestPermission();
-    
-    if (permission === 'granted') {
-      console.log('Notification permission granted.');
-      
-      // === NEW: EXPLICITLY REGISTER WORKER FOR MOBILE ===
-      console.log('Registering service worker manually...');
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/'
-      });
-      
-      // Wait for it to be fully active
-      await navigator.serviceWorker.ready;
-      console.log('Service worker is ready!');
-
-      // Pass the registration to getToken
-      const token = await getToken(messaging, { 
-        vapidKey: 'BOrKJCGlLGqUo41CkfDkZACOma05_By2wOgfIZc4KlrAwlfz6UtzkF9qwYO90uAFm-yb7qhNTsaMmj4Cj6bOSfw',
-        serviceWorkerRegistration: registration
-      });
-
-      if (token) {
-        console.log('Your Device FCM Token:', token);
-        return token;
-      } else {
-        console.log('No registration token available.');
-        return null;
-      }
-    } else {
-      console.log('Permission denied for notifications.');
+    if (!('serviceWorker' in navigator)) {
+      console.warn('Service workers not supported');
       return null;
     }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('Permission denied.');
+      return null;
+    }
+
+    // CRITICAL: Always explicitly register YOUR Firebase SW
+    // Do not rely on the auto-generated Workbox SW for FCM
+    const registration = await navigator.serviceWorker.register(
+      '/firebase-messaging-sw.js',
+      { scope: '/' }
+    );
+
+    // Wait until the SW is truly active (critical on mobile)
+    await navigator.serviceWorker.ready;
+
+    // If a new SW is waiting, activate it immediately
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+
+    console.log('Firebase SW registered and ready');
+
+    const token = await getToken(messaging, {
+      vapidKey: 'BOrKJCGlLGqUo41CkfDkZACOma05_By2wOgfIZc4KlrAwlfz6UtzkF9qwYO90uAFm-yb7qhNTsaMmj4Cj6bOSfw',
+      serviceWorkerRegistration: registration,
+    });
+
+    if (token) {
+      console.log('FCM Token:', token);
+      // Save token to Supabase profile here
+      return token;
+    }
+
+    console.warn('No FCM token received');
+    return null;
   } catch (error) {
-    console.error('An error occurred while retrieving the token:', error);
+    console.error('Error getting FCM token:', error);
     return null;
   }
 };
@@ -56,10 +66,10 @@ export const requestNotificationPermission = async (userId: string): Promise<str
 export const setupForegroundMessageListener = () => {
   try {
     onMessage(messaging, (payload) => {
-      console.log("Message received in foreground: ", payload);
+      console.log("Foreground message:", payload);
       const title = payload.notification?.title || payload.data?.title || "New Message";
       const body = payload.notification?.body || payload.data?.body || "You have a new message";
-      alert(`🔔 ${title}\n${body}`);
+      (`🔔 ${title}: ${body}`);
     });
   } catch (error) {
     console.error("Foreground listener failed:", error);
