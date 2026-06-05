@@ -17,8 +17,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { receiver_id, sender_id, message_text, content } = req.body.record;
-        const actualMessageText = message_text || content || 'Sent a message';
+        const { receiver_id, sender_id, text } = req.body.record;
+        const actualMessageText = text || 'Sent a message';
+        const notifLink = `/messages?userId=${sender_id}`;
 
         if (!receiver_id) {
             return res.status(400).json({ error: 'Missing receiver ID context.' });
@@ -59,7 +60,7 @@ export default async function handler(req, res) {
             data: {
                 title: String(displaySenderName),
                 body: String(actualMessageText),
-                link: '/dashboard?tab=messages',
+                link: notifLink,
             },
 
             notification: {
@@ -76,10 +77,10 @@ export default async function handler(req, res) {
                     badge: '/logo-192x192.png',
                     tag: 'chat-message',
                     renotify: true,
-                    data: { url: '/dashboard?tab=messages' },  // ADD THIS too
+                    data: { url: notifLink },  // ADD THIS too
                 },
                 fcmOptions: {
-                    link: '/dashboard?tab=messages'
+                    link: notifLink
                 }
             },
 
