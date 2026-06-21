@@ -451,72 +451,10 @@ const Dashboard = () => {
     );
   }
 
-  const handleEnableNotifications = async () => {
-    try {
-      setNotiStatus("Requesting...");
-
-      // 1. Get the current logged-in user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // 2. Request permission IMMEDIATELY on click (Mobile will allow this!)
-      const fcmToken = await requestNotificationPermission(user.id);
-
-      // 3. Save it to Supabase
-      if (fcmToken) {
-        await supabase
-          .from("profiles")
-          .update({ fcm_token: fcmToken })
-          .eq("id", user.id);
-
-        setNotiStatus("✅ Notifications Enabled!");
-      } else {
-        setNotiStatus("❌ Permission Denied by Browser");
-      }
-    } catch (error: any) {
-      setNotiStatus(`❌ Error: ${error.message}`);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-
-        {/* Push Notifications */}
-        <Card className="mb-8 shadow-card">
-          <CardContent className="py-5 flex items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Bell size={18} />
-              </div>
-
-              <div>
-                <h3 className="font-heading font-semibold text-foreground">
-                  Stay Updated
-                </h3>
-
-                <p className="text-sm text-muted-foreground">
-                  Enable push notifications for new messages.
-                </p>
-
-                {notiStatus && (
-                  <p className="mt-2 text-xs font-mono text-primary break-all">
-                    {notiStatus}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <Button
-              onClick={handleEnableNotifications}
-              className="shrink-0"
-            >
-              Enable
-            </Button>
-          </CardContent>
-        </Card>
-
         {/* Welfare verification banner */}
         {userProfile?.user_type === "welfare" && verificationStatus !== "approved" && (
           <Card className="shadow-card mb-8 border-amber-500/50 bg-amber-50/50">
