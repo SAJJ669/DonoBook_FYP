@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import { UserReputation } from "@/components/UserReputation";
 
 type ListingItem = {
   id: string;
@@ -688,6 +689,7 @@ const Home = () => {
                           <BadgeCheck className="h-3.5 w-3.5 text-primary shrink-0" />
                         )}
                         <span className="text-xs text-muted-foreground truncate">{item.owner?.name}</span>
+                        {<UserReputation reviews={item.owner?.received_reviews}/>}
                         {item.owner?.address && (
                           <span className="text-xs text-muted-foreground ml-auto flex items-center gap-0.5 shrink-0">
                             <MapPin className="h-3 w-3" />
