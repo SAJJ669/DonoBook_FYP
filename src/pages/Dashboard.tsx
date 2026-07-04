@@ -75,6 +75,17 @@ const Dashboard = () => {
     handleNotificationsInit();
   }, [userProfile?.id]); // Fires automatically as soon as userProfile is resolved
 
+  useEffect(() => {
+    if (profileLoading) return; // wait until the real fetch is confirmed done
+    if (userProfile?.user_type === "user" && !userProfile?.address && activeTab !== "settings") {
+      toast({
+        title: "Profile Incomplete",
+        description: "Please provide your address so you can start exchanging books!",
+      });
+      setActiveTab("settings");
+    }
+  }, [profileLoading, userProfile, activeTab]);
+
   const fetchUserProfile = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -443,7 +454,7 @@ const Dashboard = () => {
   if (profileLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
+        <Navbar userProfile={userProfile} />
         <div className="text-center py-12">
           <p className="text-muted-foreground">Loading your inventory...</p>
         </div>
@@ -453,7 +464,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
+      <Navbar userProfile={userProfile} />
       <div className="container mx-auto px-4 py-8">
         {/* Welfare verification banner */}
         {userProfile?.user_type === "welfare" && verificationStatus !== "approved" && (

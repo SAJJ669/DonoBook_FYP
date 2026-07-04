@@ -101,17 +101,20 @@ const Auth = () => {
 
           const { error: profileError } = await supabase
             .from("profiles")
-            .insert([
-              {
-                id: data.user.id,
-                name: profileName,
-                user_type: formData.userType,
-                organization_name: formData.userType === "welfare" ? formData.orgName : null,
-                address: formData.address,
-                contact_number: formData.userType === "welfare" ? formData.contactNumber : null,
-                business_id: formData.userType === "welfare" ? formData.businessId : null,
-              },
-            ]);
+            .upsert(
+              [
+                {
+                  id: data.user.id,
+                  name: profileName,
+                  user_type: formData.userType,
+                  organization_name: formData.userType === "welfare" ? formData.orgName : null,
+                  address: formData.address,
+                  contact_number: formData.userType === "welfare" ? formData.contactNumber : null,
+                  business_id: formData.userType === "welfare" ? formData.businessId : null,
+                },
+              ],
+              { onConflict: "id" }
+            );
 
           if (profileError) {
             if (profileError.code === '23505') {
