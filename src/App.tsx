@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -20,6 +21,29 @@ import SearchMessages from "./pages/SearchMessages";
 const queryClient = new QueryClient();
 
 const App = () => (
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // 1. Listen globally for state changes across the entire application runtime
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Global Auth Event Triggered:", event);
+
+      if (event === 'SIGNED_IN' && session) {
+        // Clean up messy URL hash fragments safely from the window location bar
+        if (window.location.hash) {
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+        
+        // Force navigate straight to dashboard globally
+        navigate('/dashboard');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
+  
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
