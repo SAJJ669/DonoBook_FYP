@@ -1,6 +1,6 @@
-import React from 'react'
-import {  useEffect} from 'react'
-import {useNaviagate, useSearchParams} from 'react-router-dom'
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -9,12 +9,17 @@ const AuthCallback = () => {
   useEffect(() => {
     (async () => {
       const code = searchParams.get("code");
+
       if (!code) {
         navigate("/auth", { replace: true });
         return;
       }
+
       const { error } = await supabase.auth.exchangeCodeForSession(code);
-      window.history.replaceState(null, "", "/auth/callback"); // scrub ?code before navigating
+
+      // scrub ?code=... from the address bar before navigating away
+      window.history.replaceState(null, "", "/auth/callback");
+
       navigate(error ? "/auth" : "/dashboard", { replace: true });
     })();
   }, []);
