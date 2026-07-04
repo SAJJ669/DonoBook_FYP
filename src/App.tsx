@@ -15,6 +15,7 @@ import Assistant from "./pages/Assistant";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import SearchMessages from "./pages/SearchMessages";
+import AuthCallback from "./pages/AuthCallback";
 // import EditProfile from "./pages/EditProfile"; deleted??? TODO.
 
 const queryClient = new QueryClient();
