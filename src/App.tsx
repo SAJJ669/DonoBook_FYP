@@ -25,18 +25,29 @@ const AppRoutes = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Listen globally for state changes across the entire application runtime
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Global Auth Event Triggered:", event);
+    // 1. Check for established sessions on initialization mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log("Active session verified on load.");
+        // Only route forward if they are currently idling on auth pages
+        if (window.location.pathname === '/auth' || window.location.pathname === '/') {
+          navigate('/dashboard', { replace: true });
+        }
+      }
+    });
 
-      if (event === 'SIGNED_IN' && session) {
-        // Clean up messy URL hash fragments safely from the window location bar
-        if (window.location.hash) {
+    // 2. Global application authentication status observer
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Global Auth Status Event:", event);
+
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
+        // Safe parameter and hash cleanups
+        if (window.location.hash || window.location.search) {
           window.history.replaceState(null, "", window.location.pathname);
         }
 
-        // Force navigate straight to dashboard globally
-        navigate('/dashboard');
+        console.log("Authentication validated. Transferring user to secure dashboard...");
+        navigate('/dashboard', { replace: true });
       }
     });
 
