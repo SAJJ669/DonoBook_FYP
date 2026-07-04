@@ -82,10 +82,7 @@ define(['./workbox-7e5eb42b'], (function (workbox) { 'use strict';
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
-    denylist: [
-    /^\/api\//,           // your API routes, if any
-    /\/[^/?]+\.[^/]+$/,   // anything with a file extension (e.g. .js, .png, .json) — not a route
-  ],
+    allowlist: [/^\/$/]
   }));
 
 }));

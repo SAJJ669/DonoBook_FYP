@@ -29,32 +29,23 @@ const Auth = () => {
   const [proofImage, setProofImage] = useState<File | null>(null);
 
   useEffect(() => {
-    // 1. Immediately look if a valid session was already established
+    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        console.log("Session found on mount, navigating to dashboard...");
         navigate("/dashboard");
       }
     });
 
-    // 2. This is critical for OAuth (Google)! 
-    // When Supabase parses the #access_token from the URL, it fires the SIGNED_IN event.
+    // Listen for login/signup events
     const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth State Changed Event:", event);
-
-        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
-          // Clean up the URL hash fragments so it doesn't look messy
-          if (window.location.hash) {
-            window.history.replaceState(null, "", window.location.pathname);
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          if (session.user.app_metadata.provider === 'google') {
+            navigate("/dashboard");
           }
-
-          console.log("OAuth Success! Navigating to dashboard...");
-          navigate("/dashboard");
         }
       }
     );
-
     return () => {
       listener.subscription.unsubscribe();
     };
@@ -64,12 +55,16 @@ const Auth = () => {
     setIsSignup(searchParams.get("mode") === "signup");
   }, [searchParams]);
 
-  // OAuth with Google
   const handleGoogleLogin = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        // This is where users are sent after logging in
+        redirectTo: window.location.origin,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     });
 

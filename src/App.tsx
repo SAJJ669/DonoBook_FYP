@@ -15,7 +15,6 @@ import Assistant from "./pages/Assistant";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import SearchMessages from "./pages/SearchMessages";
-import AuthCallback from "./pages/AuthCallback";
 // import EditProfile from "./pages/EditProfile"; deleted??? TODO.
 
 const queryClient = new QueryClient();
@@ -38,7 +37,6 @@ const App = () => (
           <Route path="/search-messages" element={<SearchMessages />} />
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
