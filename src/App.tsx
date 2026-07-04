@@ -19,10 +19,9 @@ import SearchMessages from "./pages/SearchMessages";
 // import EditProfile from "./pages/EditProfile"; deleted??? TODO.
 
 const queryClient = new QueryClient();
+const navigate = useNavigate();
 
 const App = () => (
-  const navigate = useNavigate();
-
   useEffect(() => {
     // 1. Listen globally for state changes across the entire application runtime
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -43,7 +42,7 @@ const App = () => (
       subscription.unsubscribe();
     };
   }, [navigate]);
-  
+
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
