@@ -66,29 +66,22 @@ const Auth = () => {
 
   // OAuth with Google
   const handleGoogleLogin = async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      // Directs the user back to your origin domain
-      redirectTo: window.location.origin, 
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        flowType: 'pkce',
       },
-      // CRITICAL: Forces Supabase to use standard clean URL queries (?code=) 
-      // instead of routing hash breaks (#access_token=)
-      flowType: 'pkce', 
-    },
-  });
-
-  if (error) {
-    toast({
-      title: "Login Failed",
-      description: error.message,
-      variant: "destructive",
     });
-  }
-};
+
+    if (error) {
+      toast({
+        title: "Login Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
