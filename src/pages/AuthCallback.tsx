@@ -21,3 +21,5 @@ const AuthCallback = () => {
 
   return <div>Signing you in…</div>;
 };
+
+export default AuthCallback;
