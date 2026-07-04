@@ -29,47 +29,32 @@ const Auth = () => {
   const [proofImage, setProofImage] = useState<File | null>(null);
 
   useEffect(() => {
-  // 1. Immediately look if a valid session was already established
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session) {
-      console.log("Session found on mount, navigating to dashboard...");
-      navigate("/dashboard");
-    }
-  });
-
-  // 2. This is critical for OAuth (Google)! 
-  // When Supabase parses the #access_token from the URL, it fires the SIGNED_IN event.
-  const { data: listener } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      console.log("Auth State Changed Event:", event);
-      
-      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
-        // Clean up the URL hash fragments so it doesn't look messy
-        if (window.location.hash) {
-          window.history.replaceState(null, "", window.location.pathname);
-        }
-        
-        console.log("OAuth Success! Navigating to dashboard...");
+    // 1. Immediately look if a valid session was already established
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        console.log("Session found on mount, navigating to dashboard...");
         navigate("/dashboard");
       }
-    }
-  );
-  
-  return () => {
-    listener.subscription.unsubscribe();
-  };
-}, [navigate]);
+    });
 
-    // Listen for login/signup events
+    // 2. This is critical for OAuth (Google)! 
+    // When Supabase parses the #access_token from the URL, it fires the SIGNED_IN event.
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          if (session.user.app_metadata.provider === 'google') {
-            navigate("/dashboard");
+      async (event, session) => {
+        console.log("Auth State Changed Event:", event);
+
+        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
+          // Clean up the URL hash fragments so it doesn't look messy
+          if (window.location.hash) {
+            window.history.replaceState(null, "", window.location.pathname);
           }
+
+          console.log("OAuth Success! Navigating to dashboard...");
+          navigate("/dashboard");
         }
       }
     );
+
     return () => {
       listener.subscription.unsubscribe();
     };
