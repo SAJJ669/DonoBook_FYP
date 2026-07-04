@@ -159,6 +159,7 @@ const Home = () => {
     return combined;
   };
 
+  // Query for book/item owner details
   const fetchInitial = async (recCat: string | null) => {
     try {
       const bookSelect = `*, owner:profiles!books_owner_id_fkey(name, verified, address, received_reviews:reviews!reviewee_id(rating))`;
@@ -262,6 +263,7 @@ const Home = () => {
 
   const activeFilterCount = activeCategories.length + activeTypes.length + (locationQuery ? 1 : 0);
 
+  // Filtered Search 
   const getFilteredListings = () => {
     let filtered = listings;
     if (activeCategories.length > 0) {
