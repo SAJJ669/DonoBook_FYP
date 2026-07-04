@@ -21,27 +21,27 @@ import SearchMessages from "./pages/SearchMessages";
 const queryClient = new QueryClient();
 const navigate = useNavigate();
 
-const App = () => (
-  useEffect(() => {
-    // 1. Listen globally for state changes across the entire application runtime
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Global Auth Event Triggered:", event);
+useEffect(() => {
+  // 1. Listen globally for state changes across the entire application runtime
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    console.log("Global Auth Event Triggered:", event);
 
-      if (event === 'SIGNED_IN' && session) {
-        // Clean up messy URL hash fragments safely from the window location bar
-        if (window.location.hash) {
-          window.history.replaceState(null, "", window.location.pathname);
-        }
-        
-        // Force navigate straight to dashboard globally
-        navigate('/dashboard');
+    if (event === 'SIGNED_IN' && session) {
+      // Clean up messy URL hash fragments safely from the window location bar
+      if (window.location.hash) {
+        window.history.replaceState(null, "", window.location.pathname);
       }
-    });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+      // Force navigate straight to dashboard globally
+      navigate('/dashboard');
+    }
+  });
+
+  return () => {
+    subscription.unsubscribe();
+  };
+}, [navigate]);
+const App = () => (
 
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
